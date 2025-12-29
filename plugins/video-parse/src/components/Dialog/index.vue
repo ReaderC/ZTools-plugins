@@ -34,7 +34,7 @@ const handleConfirm = () => {
 </script>
 
 <template>
-  <Transition name="fade">
+  <Transition name="fade" appear>
     <div 
       v-show="visible" 
       class="dialog-overlay"
@@ -70,20 +70,20 @@ const handleConfirm = () => {
   </Transition>
 </template>
 
-<style scoped>
-/* 动画 */
+<style lang="scss" scoped>
+// 淡入弹出动画
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
 }
 
-/* 2. 为内容单独添加 transform 过渡 */
+// 2. 为内容单独添加 transform 过渡
 .fade-enter-active .dialog-content,
 .fade-leave-active .dialog-content {
   transition: transform 0.3s ease;
 }
 
-/* 3. 初始/结束状态：背景透明，内容缩放 */
+// 3. 初始/结束状态：背景透明，内容缩放
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
@@ -93,7 +93,7 @@ const handleConfirm = () => {
   transform: scale(0.9);
 }
 
-/* 4. 正常状态 */
+// 4. 正常状态
 .fade-enter-to,
 .fade-leave-from {
   opacity: 1;
@@ -103,7 +103,7 @@ const handleConfirm = () => {
   transform: scale(1);
 }
 
-/* 遮罩层 */
+// 遮罩层
 .dialog-overlay {
   position: absolute;
   inset: 0;
@@ -114,18 +114,18 @@ const handleConfirm = () => {
   background-color: rgba(15, 23, 42, 0.5);
 }
 
-/* 弹窗主体 */
+// 弹窗主体
 .dialog-content {
   background-color: white;
   border-radius: 5px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 100%;
-  /* max-width 由 props 控制，默认 24rem */
+  // max-width 由 props 控制
   border: 1px solid #f3f4f6;
   overflow: hidden;
 }
 
-/* 头部 */
+// 头部
 .dialog-header {
   display: flex;
   align-items: center;
@@ -166,7 +166,7 @@ const handleConfirm = () => {
   background-color: #f3f4f6;
 }
 
-/* 内容区 */
+// 内容区
 .dialog-body {
   padding: 20px 10px;
   display: flex;
@@ -174,7 +174,7 @@ const handleConfirm = () => {
   gap: 20px;
 }
 
-/* 底部 */
+// 底部
 .dialog-footer {
   padding: 10px;
   background-color: #f9fafb;

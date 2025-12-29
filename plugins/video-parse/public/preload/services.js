@@ -23,7 +23,7 @@ window.services = {
     return filePath
   },
   // 下载视频到本地下载目录
-  async downloadVideo (url, type = 'pic') {
+  async downloadVideo (url, type = 'pic', onProgress) {
     const https = require('https');
     const fs = require('fs');
     return new Promise((resolve, reject) => {
@@ -47,6 +47,15 @@ window.services = {
       
       const file = fs.createWriteStream(filePath);
       https.get(url, (response) => {
+        const total = parseInt(response.headers['content-length'], 10);
+        let downloaded = 0;
+        // 监听数据传输
+        response.on('data', (chunk) => {
+          downloaded += chunk.length;
+          if (onProgress && total) {
+            onProgress(downloaded, total);
+          }
+        });
         response.pipe(file);
         file.on('finish', () => {
           file.close();

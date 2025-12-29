@@ -97,8 +97,12 @@ const platformList = [
 const parseInfo = async () => {
   if (!content.value) return;
   // 解析出content中的url
-  const url = content.value.match(/http[s]?:\/\/[^\s]+/)[0];
-  console.log(url);
+  const urlMatch = content.value.match(/http[s]?:\/\/[^\s]+/);
+  if (!urlMatch) {
+    showError('未找到有效的链接');
+    return;
+  }
+  const url = urlMatch[0];
   if (!url) return;
   loading.value = true;
   try {
@@ -192,7 +196,11 @@ const download = async (livePhoto) => {
     url = previewImage.value;
   }
   try {
-    const res = await window.services.downloadVideo(url, type);
+    const res = await window.services.downloadVideo(url, type, (downloaded, total) => {
+      const progress = (downloaded / total) * 100;
+      console.log(`下载进度: ${progress.toFixed(2)}%`);
+      showToast(`下载进度: ${progress.toFixed(2)}%`);
+    });
     console.log(res);
     if (res) {
       window.utools.shellShowItemInFolder(res);

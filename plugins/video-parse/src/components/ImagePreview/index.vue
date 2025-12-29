@@ -127,7 +127,11 @@ const download = async () => {
   loading.value = true;
   url = props.list[props.current];
   try {
-    const res = await window.services.downloadVideo(url, type);
+    const res = await window.services.downloadVideo(url, type, (downloaded, total) => {
+      const progress = (downloaded / total) * 100;
+      console.log(`下载进度: ${progress.toFixed(2)}%`);
+      showToast(`下载进度: ${progress.toFixed(2)}%`);
+    });
     console.log(res);
     if (res) {
       window.utools.shellShowItemInFolder(res);
