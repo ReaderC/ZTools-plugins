@@ -11,11 +11,13 @@
     "@types/js-beautify": "^1.14.3",
     "js-beautify": "^1.15.4",
     "pinia": "^3.0.4",
+    "pixelmatch": "^7.1.0",
     "vue": "^3.5.13",
     "vue-i18n": "9",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/pixelmatch": "^5.2.6",
     "@vitejs/plugin-vue": "^5.2.1",
     "@ztools-center/ztools-api-types": "^1.0.1",
     "autoprefixer": "^10.4.27",

@@ -84,6 +84,7 @@
 *::before,
 *::after {
   box-sizing: border-box;
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, fill 0.25s ease, stroke 0.25s ease, box-shadow 0.25s ease;
 }
 
 body {
@@ -94,7 +95,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.25s ease, color 0.25s ease;
   margin: 0;
   padding: 0;
 }

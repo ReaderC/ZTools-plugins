@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import pixelmatch from 'pixelmatch'
 import ZTooltip from '@/components/ui/base/ZTooltip.vue'
 import ZBadge from '@/components/ui/base/ZBadge.vue'
 import ZButton from '@/components/ui/base/ZButton.vue'
 
 const { locale, t } = useI18n()
 // 视图模式
-type ViewMode = 'split' | 'slider' | 'blend' | 'difference'
+type ViewMode = 'split' | 'slider' | 'blend' | 'highlight'
 // 图片
 const sourceImage = ref<string | null>(null)
 const targetImage = ref<string | null>(null)
@@ -31,6 +32,66 @@ const panY = ref(0)
 const lastMousePos = ref({ x: 0, y: 0 })
 
 const bothLoaded = computed(() => !!sourceImage.value && !!targetImage.value)
+
+// ── Highlight Diff Computation ────────────────────────
+const diffOverlay = ref<string | null>(null)
+const isComputingDiff = ref(false)
+
+const loadImageObj = (src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = reject
+        img.src = src
+    })
+}
+
+const computePixelDiff = async () => {
+    if (!sourceImage.value || !targetImage.value) return
+    isComputingDiff.value = true
+    try {
+        const imgSrc = await loadImageObj(sourceImage.value)
+        const imgTarget = await loadImageObj(targetImage.value)
+
+        const width = Math.max(imgSrc.width, imgTarget.width)
+        const height = Math.max(imgSrc.height, imgTarget.height)
+
+        const c1 = document.createElement('canvas')
+        c1.width = width
+        c1.height = height
+        const ctx1 = c1.getContext('2d')!
+        ctx1.drawImage(imgSrc, 0, 0)
+        const data1 = ctx1.getImageData(0, 0, width, height)
+
+        const c2 = document.createElement('canvas')
+        c2.width = width
+        c2.height = height
+        const ctx2 = c2.getContext('2d')!
+        ctx2.drawImage(imgTarget, 0, 0)
+        const data2 = ctx2.getImageData(0, 0, width, height)
+
+        const diffCanvas = document.createElement('canvas')
+        diffCanvas.width = width
+        diffCanvas.height = height
+        const diffCtx = diffCanvas.getContext('2d')!
+        const diffData = diffCtx.createImageData(width, height)
+
+        pixelmatch(data1.data, data2.data, diffData.data, width, height, { threshold: 0.1, alpha: 0.5, includeAA: true, diffColor: [255, 0, 0] })
+
+        diffCtx.putImageData(diffData, 0, 0)
+        diffOverlay.value = diffCanvas.toDataURL()
+    } catch (e) {
+        console.error('Failed to compute diff:', e)
+    } finally {
+        isComputingDiff.value = false
+    }
+}
+
+watch([viewMode, sourceImage, targetImage], () => {
+    if (viewMode.value === 'highlight' && bothLoaded.value) {
+        computePixelDiff()
+    }
+})
 
 // ── File loading ─────────────────────────────────────
 const readFile = (file: File): Promise<string> =>
@@ -80,6 +141,7 @@ const handleDrop = async (e: DragEvent, side: 'source' | 'target') => {
 const clearImages = () => {
     sourceImage.value = null
     targetImage.value = null
+    diffOverlay.value = null
     sliderPos.value = 50
     blendOpacity.value = 0.5
     viewMode.value = 'split'
@@ -182,16 +244,15 @@ onUnmounted(() => {
                     </svg>
                     {{ t('viewBlend') }}
                 </ZButton>
-                <ZButton :variant="viewMode === 'difference' ? 'primary' : 'surface'" size="sm"
-                    @click="viewMode = 'difference'" class="!rounded-md">
+                <ZButton :variant="viewMode === 'highlight' ? 'primary' : 'surface'" size="sm"
+                    @click="viewMode = 'highlight'" class="!rounded-md">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3v18" />
-                        <path d="M3 12h18" />
-                        <path d="m18 15 3-3-3-3" />
-                        <path d="m6 9-3 3 3 3" />
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
                     </svg>
-                    {{ t('viewDifference') }}
+                    {{ t('viewHighlight') || 'Highlight' }}
                 </ZButton>
             </div>
 
@@ -199,10 +260,10 @@ onUnmounted(() => {
                 <div class="flex items-center gap-2">
                     <ZBadge variant="surface" size="xs">{{ t('zoom') || 'Zoom' }}</ZBadge>
                     <span class="text-xs font-mono font-bold text-[var(--color-secondary)]">{{ Math.round(zoom * 100)
-                    }}%</span>
+                        }}%</span>
                 </div>
 
-                <div class="flex gap-2">
+                <div class="flex gap-2 justify-center items-center">
                     <ZTooltip :content="t('resetZoom')">
                         <ZButton variant="surface" size="sm" @click="resetTransform" :disabled="!bothLoaded"
                             class="text-[var(--color-cta)]">
@@ -407,22 +468,38 @@ onUnmounted(() => {
                         </div>
                     </template>
 
-                    <!-- DIFFERENCE MODE -->
-                    <template v-else-if="viewMode === 'difference'">
+                    <!-- HIGHLIGHT MODE -->
+                    <template v-else-if="viewMode === 'highlight'">
                         <div class="absolute inset-0 overflow-hidden pointer-events-none" :style="imageTransform">
                             <div class="relative w-full h-full p-8 flex items-center justify-center">
-                                <img :src="targetImage" class="max-w-full max-h-full object-contain" />
-                                <img :src="sourceImage"
-                                    class="absolute max-w-full max-h-full object-contain mix-blend-difference" :style="{
+                                <img :src="targetImage"
+                                    class="max-w-full max-h-full object-contain opacity-30 transition-opacity duration-300" />
+                                <img v-if="diffOverlay" :src="diffOverlay"
+                                    class="absolute max-w-full max-h-full object-contain drop-shadow-xl transition-opacity duration-300"
+                                    :style="{
                                         width: 'auto',
                                         height: 'auto',
                                         maxWidth: 'calc(100% - 64px)',
                                         maxHeight: 'calc(100% - 64px)'
                                     }" />
+                                <div v-if="isComputingDiff"
+                                    class="absolute inset-0 flex items-center justify-center bg-[var(--color-background)]/50 z-20 backdrop-blur-sm">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="animate-spin h-8 w-8 text-[var(--color-cta)]"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        <span class="text-sm font-bold opacity-70">Computing Diff...</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-                            <span class="view-pill">{{ t('viewDifference') }}</span>
+                            <span class="view-pill">{{ t('viewHighlight') || 'Highlight' }}</span>
                         </div>
                     </template>
 

@@ -23,7 +23,7 @@ const en = {
   viewUnified: 'Unified View',
   viewSlider: 'Slider View',
   viewBlend: 'Blend View',
-  viewDifference: 'Diff Mode',
+  viewHighlight: 'Diff Mode',
   clearItems: 'Clear Content',
   nextChange: 'Next Change',
   prevChange: 'Prev Change',

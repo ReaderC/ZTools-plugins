@@ -357,45 +357,47 @@ const getRowDiff = (row: number) => {
         <!-- ── Top Toolbar ─────────────────────────────────────── -->
         <div
             class="h-14 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-between px-5 flex-shrink-0 z-30 shadow-sm relative w-full">
-            <div class="flex items-center gap-2">
-                <ZBadge variant="surface" size="lg">{{ t('sheet') }}</ZBadge>
-                <ZSelect v-model="selectedSheetName" :options="sheetOptions" class="min-w-[140px]"
-                    :disabled="!bothLoaded" />
-            </div>
-
-            <div class="h-4 w-px bg-[var(--color-border)] mx-1"></div>
-
-            <div class="flex items-center gap-2">
-                <div class="flex bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] p-1 shadow-sm transition-opacity"
-                    :class="{ 'opacity-50 pointer-events-none': !bothLoaded }">
-                    <ZButton :variant="viewMode === 'split' ? 'primary' : 'surface'" size="sm"
-                        @click="viewMode = 'split'" class="!rounded-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                            <line x1="12" y1="3" x2="12" y2="21" />
-                        </svg>
-                        {{ t('viewSplit') }}
-                    </ZButton>
-                    <ZButton :variant="viewMode === 'unified' ? 'primary' : 'surface'" size="sm"
-                        @click="viewMode = 'unified'" class="!rounded-md">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                        </svg>
-                        {{ t('viewUnified') }}
-                    </ZButton>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 transition-opacity" :class="{ 'opacity-50 pointer-events-none': !bothLoaded }">
+                    <ZBadge variant="surface" size="lg">{{ t('sheet') }}</ZBadge>
+                    <ZSelect v-model="selectedSheetName" :options="sheetOptions" class="min-w-[140px]"
+                        :disabled="!bothLoaded" />
                 </div>
-            </div>
 
-            <div class="h-4 w-px bg-[var(--color-border)] mx-1"></div>
+                <div class="h-4 w-px bg-[var(--color-border)] mx-1"></div>
 
-            <div class="flex items-center gap-1">
-                <ZBadge v-if="currentSheetDiff && currentSheetDiff.diffs.length" variant="primary" size="lg"
-                    class="cursor-pointer hover:brightness-110 active:scale-95 transition-all select-none"
-                    @click="goToNextDiff(); showDiffPanel = true">
-                    {{ currentSheetDiff.diffs.length }} {{ t('cellDiff') }}
-                </ZBadge>
+                <div class="flex items-center gap-2">
+                    <div class="flex bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] p-1 shadow-sm transition-opacity"
+                        :class="{ 'opacity-50 pointer-events-none': !bothLoaded }">
+                        <ZButton :variant="viewMode === 'split' ? 'primary' : 'surface'" size="sm"
+                            @click="viewMode = 'split'" class="!rounded-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                <line x1="12" y1="3" x2="12" y2="21" />
+                            </svg>
+                            {{ t('viewSplit') }}
+                        </ZButton>
+                        <ZButton :variant="viewMode === 'unified' ? 'primary' : 'surface'" size="sm"
+                            @click="viewMode = 'unified'" class="!rounded-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                            </svg>
+                            {{ t('viewUnified') }}
+                        </ZButton>
+                    </div>
+                </div>
+
+                <div class="h-4 w-px bg-[var(--color-border)] mx-1" v-if="currentSheetDiff && currentSheetDiff.diffs.length"></div>
+
+                <div class="flex items-center gap-1" v-if="currentSheetDiff && currentSheetDiff.diffs.length">
+                    <ZBadge variant="primary" size="lg"
+                        class="cursor-pointer hover:brightness-110 active:scale-95 transition-all select-none"
+                        @click="goToNextDiff(); showDiffPanel = true">
+                        {{ currentSheetDiff.diffs.length }} {{ t('cellDiff') }}
+                    </ZBadge>
+                </div>
             </div>
 
             <div class="flex items-center gap-2">
@@ -570,23 +572,27 @@ const getRowDiff = (row: number) => {
 
                         <!-- ── CENTRAL DIFF BAR ─────────────────── -->
                         <div ref="diffBarRef"
-                            class="w-12 bg-[var(--color-surface)] border-r border-[var(--color-border)] overflow-hidden flex flex-col no-scrollbar"
+                            class="w-16 bg-[var(--color-surface)] border-x border-[var(--color-border)] overflow-hidden flex flex-col no-scrollbar shadow-[0_0_15px_-3px_rgba(0,0,0,0.05)] z-10"
                             @scroll="syncScroll">
                             <div
-                                class="h-8 border-b border-[var(--color-border)] flex items-center justify-center bg-[var(--color-background)] flex-shrink-0 text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-tighter sticky top-0 z-40">
+                                class="h-8 border-b border-[var(--color-border)] flex items-center justify-center bg-[var(--color-background)] flex-shrink-0 text-[10px] font-bold text-[var(--color-secondary)] uppercase tracking-tighter sticky top-0 z-40 shadow-sm">
                                 {{ t('diffResult') || 'Diff' }}
                             </div>
                             <div class="flex-1 py-1">
                                 <div v-for="r in currentSheetDiff.rowCount" :key="'db-' + r"
                                     :id="`diff-row-${r - 1}`"
-                                    class="h-6 flex items-center justify-center">
+                                    class="h-6 flex items-center justify-center relative">
+                                    
+                                    <!-- Connection Lines (Optional styling purely for visual flow) -->
+                                    <div v-if="getRowDiff(r - 1)" class="absolute left-0 right-0 h-px bg-current opacity-10" :class="`text-${getRowDiff(r - 1)?.type === 'modified' ? 'yellow-500' : (getRowDiff(r - 1)?.type === 'added' ? 'emerald-500' : 'red-500')}`"></div>
+
                                     <ZTooltip v-if="getRowDiff(r - 1)" position="top">
-                                        <div class="diff-icon-wrapper" :class="[
+                                        <div class="diff-icon-wrapper relative z-10" :class="[
                                             'diff-icon--' + getRowDiff(r - 1)?.type,
                                             activeCell?.row === (r - 1) ? 'diff-icon--active' : ''
                                         ]" @click="scrollToCell(r - 1, getRowDiff(r - 1)?.col || 0)">
                                             <template v-if="getRowDiff(r - 1)?.type === 'modified'">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                                     <path d="M12 20h9" />
@@ -594,17 +600,17 @@ const getRowDiff = (row: number) => {
                                                 </svg>
                                             </template>
                                             <template v-else-if="getRowDiff(r - 1)?.type === 'added'">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                                     <line x1="12" y1="5" x2="12" y2="19" />
                                                     <line x1="5" y1="12" x2="19" y2="12" />
                                                 </svg>
                                             </template>
                                             <template v-else-if="getRowDiff(r - 1)?.type === 'removed'">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                                                     <line x1="5" y1="12" x2="19" y2="12" />
                                                 </svg>
                                             </template>
@@ -952,27 +958,49 @@ const getRowDiff = (row: number) => {
 }
 
 .diff-icon--modified {
-    color: var(--color-warning);
+    color: #eab308;
+    background-color: rgba(234, 179, 8, 0.1);
 }
 
 .diff-icon--added {
-    color: var(--color-success);
+    color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
 }
 
 .diff-icon--removed {
-    color: var(--color-danger);
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
 }
 
 .diff-icon--active {
-    background: var(--color-cta);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.diff-icon--active.diff-icon--modified {
+    background-color: #eab308;
     color: white !important;
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px var(--color-cta-faded);
+}
+
+.diff-icon--active.diff-icon--added {
+    background-color: #10b981;
+    color: white !important;
+}
+
+.diff-icon--active.diff-icon--removed {
+    background-color: #ef4444;
+    color: white !important;
+}
+
+.dark .diff-icon--active.diff-icon--modified,
+.dark .diff-icon--active.diff-icon--added,
+.dark .diff-icon--active.diff-icon--removed {
+    color: #111 !important;
 }
 
 .diff-icon-wrapper:hover:not(.diff-icon--active) {
-    background: var(--color-surface);
     transform: scale(1.1);
+    filter: brightness(1.2);
 }
 
 /* ── Sheet Tabs ────────────────────────────────────── */

@@ -33,7 +33,7 @@ const zh = {
   viewUnified: '合并对比',
   viewSlider: '滑块对比',
   viewBlend: '混合对比',
-  viewDifference: '差异对比',
+  viewHighlight: '差异对比',
   clearItems: '清空内容',
   nextChange: '下一个差异',
   prevChange: '上一个差异',
