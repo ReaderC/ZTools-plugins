@@ -9,6 +9,9 @@ import FileDropzone from '@/components/shared/FileDropzone.vue'
 import DiffBar from '@/components/shared/DiffBar.vue'
 import DiffLegend from '@/components/shared/DiffLegend.vue'
 import PrevNextButtons from '@/components/shared/PrevNextButtons.vue'
+import { readFileAsArrayBuffer } from '@/utils/file'
+import { extractFilesFromClipboard } from '@/utils/clipboard'
+import { getNextIndex, getPrevIndex } from '@/utils/diffNavigation'
 import { TextDiffStrategy } from '@/core/diff/text/myers'
 
 const { t } = useI18n()
@@ -127,14 +130,6 @@ const diffCount = computed(() => {
     return paragraphBlocks.value.filter(b => b.type !== 'equal').length
 })
 
-const readFile = (file: File): Promise<ArrayBuffer> =>
-    new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = (e) => resolve(e.target?.result as ArrayBuffer)
-        reader.onerror = () => reject(new Error('Failed to read file'))
-        reader.readAsArrayBuffer(file)
-    })
-
 const handleFile = async (e: Event, side: 'source' | 'target') => {
     const input = e.target as HTMLInputElement
     const files = input.files
@@ -145,8 +140,8 @@ const handleFile = async (e: Event, side: 'source' | 'target') => {
     try {
         if (files.length >= 2) {
             const [buf1, buf2] = await Promise.all([
-                readFile(files[0]),
-                readFile(files[1])
+                readFileAsArrayBuffer(files[0]),
+                readFileAsArrayBuffer(files[1])
             ])
             const [r1, r2] = await Promise.all([
                 mammoth.convertToHtml({ arrayBuffer: buf1 }),
@@ -157,7 +152,7 @@ const handleFile = async (e: Event, side: 'source' | 'target') => {
             sourceFileName.value = files[0].name
             targetFileName.value = files[1].name
         } else {
-            const buf = await readFile(files[0])
+            const buf = await readFileAsArrayBuffer(files[0])
             const result = await mammoth.convertToHtml({ arrayBuffer: buf })
             if (side === 'source') {
                 sourceHtml.value = result.value
@@ -184,16 +179,7 @@ const clearItems = () => {
 }
 
 const handlePaste = async (e: ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    const files: File[] = []
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file') {
-            const file = items[i].getAsFile()
-            if (file && /\.docx?$/i.test(file.name)) files.push(file)
-        }
-    }
+    const files = extractFilesFromClipboard(e, (file) => /\.docx?$/i.test(file.name))
 
     if (files.length === 0) return
     loading.value = true
@@ -201,8 +187,8 @@ const handlePaste = async (e: ClipboardEvent) => {
     try {
         if (files.length >= 2) {
             const [buf1, buf2] = await Promise.all([
-                readFile(files[0]),
-                readFile(files[1])
+                readFileAsArrayBuffer(files[0]),
+                readFileAsArrayBuffer(files[1])
             ])
             const [r1, r2] = await Promise.all([
                 mammoth.convertToHtml({ arrayBuffer: buf1 }),
@@ -213,7 +199,7 @@ const handlePaste = async (e: ClipboardEvent) => {
             sourceFileName.value = files[0].name
             targetFileName.value = files[1].name
         } else {
-            const buf = await readFile(files[0])
+            const buf = await readFileAsArrayBuffer(files[0])
             const result = await mammoth.convertToHtml({ arrayBuffer: buf })
             if (sourceHtml.value) {
                 targetHtml.value = result.value
@@ -262,27 +248,21 @@ const scrollToBlock = (idx: number) => {
 }
 
 const goToNextDiff = () => {
-    // 获取所有差异块的索引
-    const diffs = paragraphBlocks.value.map((b, i) => (b.type !== 'equal' ? i : -1)).filter((i) => i >= 0)
-    if (diffs.length === 0) return
-    // 获取当前差异块的索引
-    const curr = diffs.findIndex((i) => i === activeBlockIdx.value)
-    // 获取下一个差异块的索引
-    const next = (curr + 1) % diffs.length
-    // 滚动到下一个差异块
-    scrollToBlock(diffs[next])
+    const indices = paragraphBlocks.value
+        .map((b, i) => (b.type !== 'equal' ? i : -1))
+        .filter((i) => i >= 0)
+    const next = getNextIndex(indices, activeBlockIdx.value)
+    if (next === -1) return
+    scrollToBlock(next)
 }
 
 const goToPrevDiff = () => {
-    // 获取所有差异块的索引
-    const diffs = paragraphBlocks.value.map((b, i) => (b.type !== 'equal' ? i : -1)).filter((i) => i >= 0)
-    if (diffs.length === 0) return
-    // 获取当前差异块的索引
-    const curr = diffs.findIndex((i) => i === activeBlockIdx.value)
-    // 获取上一个差异块的索引
-    const prev = curr <= 0 ? diffs.length - 1 : curr - 1
-    // 滚动到上一个差异块
-    scrollToBlock(diffs[prev])
+    const indices = paragraphBlocks.value
+        .map((b, i) => (b.type !== 'equal' ? i : -1))
+        .filter((i) => i >= 0)
+    const prev = getPrevIndex(indices, activeBlockIdx.value)
+    if (prev === -1) return
+    scrollToBlock(prev)
 }
 
 let activeScrollTarget: HTMLElement | null = null
@@ -323,7 +303,7 @@ onUnmounted(() => {
                     <span v-else class="text-xs text-[var(--color-secondary)]">{{ t('wordNoDiff') }}</span>
                 </template>
                 <span v-else class="text-xs text-[var(--color-secondary)] opacity-60">{{ t('wordDiffEmptyHint')
-                }}</span>
+                    }}</span>
                 <ZTooltip :content="t('clearItems')" v-if="bothLoaded">
                     <ZButton variant="ghost" size="icon-sm" @click="clearItems"
                         class="!w-6 !h-6 text-[var(--color-secondary)] hover:text-[var(--color-text)]">

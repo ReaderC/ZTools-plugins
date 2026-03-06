@@ -9,6 +9,8 @@ import ZSelect from '@/components/ui/base/ZSelect.vue'
 import FileDropzone from '@/components/shared/FileDropzone.vue'
 import DiffLegend from '@/components/shared/DiffLegend.vue'
 import { normalizeString } from '@/utils/string'
+import { readFileAsArrayBuffer } from '@/utils/file'
+import { extractFilesFromClipboard } from '@/utils/clipboard'
 
 const { t } = useI18n()
 
@@ -48,16 +50,11 @@ const currentSheetDiff = computed(() => {
     return diffResult.value.find(s => s.name === selectedSheetName.value) || null
 })
 
-const readFile = (file: File): Promise<XLSX.WorkBook> =>
-    new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target?.result as ArrayBuffer)
-            const workbook = XLSX.read(data, { type: 'array' })
-            resolve(workbook)
-        }
-        reader.readAsArrayBuffer(file)
-    })
+const readWorkbook = async (file: File): Promise<XLSX.WorkBook> => {
+    const buffer = await readFileAsArrayBuffer(file)
+    const data = new Uint8Array(buffer)
+    return XLSX.read(data, { type: 'array' })
+}
 
 const handleFile = async (e: Event, side: 'source' | 'target') => {
     const input = e.target as HTMLInputElement
@@ -67,10 +64,10 @@ const handleFile = async (e: Event, side: 'source' | 'target') => {
     loading.value = true
     try {
         if (files.length >= 2) {
-            sourceWorkbook.value = await readFile(files[0])
-            targetWorkbook.value = await readFile(files[1])
+            sourceWorkbook.value = await readWorkbook(files[0])
+            targetWorkbook.value = await readWorkbook(files[1])
         } else {
-            const wb = await readFile(files[0])
+            const wb = await readWorkbook(files[0])
             if (side === 'source') sourceWorkbook.value = wb
             else targetWorkbook.value = wb
         }
@@ -150,27 +147,18 @@ const clearItems = () => {
 }
 
 const handlePaste = async (e: ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    const files: File[] = []
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file') {
-            const file = items[i].getAsFile()
-            if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
-                files.push(file)
-            }
-        }
-    }
+    const files = extractFilesFromClipboard(e, (file) =>
+        file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')
+    )
 
     if (files.length === 0) return
     loading.value = true
     try {
         if (files.length >= 2) {
-            sourceWorkbook.value = await readFile(files[0])
-            targetWorkbook.value = await readFile(files[1])
+            sourceWorkbook.value = await readWorkbook(files[0])
+            targetWorkbook.value = await readWorkbook(files[1])
         } else {
-            const wb = await readFile(files[0])
+            const wb = await readWorkbook(files[0])
             // If source is already there, put in target, else source
             if (sourceWorkbook.value) targetWorkbook.value = wb
             else sourceWorkbook.value = wb
@@ -348,7 +336,7 @@ const getRowDiff = (row: number) => {
                     <div class="flex bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] p-1 shadow-sm transition-opacity"
                         :class="{ 'opacity-50 pointer-events-none': !bothLoaded }">
                         <ZButton :variant="viewMode === 'split' ? 'primary' : 'surface'" size="sm"
-                            @click="viewMode = 'split'" class="!rounded-md">
+                            @click="viewMode = 'split'" class="!rounded-md mx-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -358,7 +346,7 @@ const getRowDiff = (row: number) => {
                             {{ t('viewSplit') }}
                         </ZButton>
                         <ZButton :variant="viewMode === 'unified' ? 'primary' : 'surface'" size="sm"
-                            @click="viewMode = 'unified'" class="!rounded-md">
+                            @click="viewMode = 'unified'" class="!rounded-md mx-1">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -525,7 +513,7 @@ const getRowDiff = (row: number) => {
                                             :class="getCellClass(r - 1, c - 1, 'source')">
                                             <div class="cell-content">
                                                 <span class="val-plain">{{ currentSheetDiff.sourceData[r - 1]?.[c - 1]
-                                                    }}</span>
+                                                }}</span>
                                             </div>
                                         </td>
                                     </tr>
@@ -602,7 +590,7 @@ const getRowDiff = (row: number) => {
                                                         }}</span>
                                                 </div>
                                                 <div class="mt-1 text-[10px] opacity-50">{{ getRowDiff(r - 1)?.address
-                                                }}
+                                                    }}
                                                 </div>
                                             </div>
                                         </template>
@@ -630,7 +618,7 @@ const getRowDiff = (row: number) => {
                                             :class="getCellClass(r - 1, c - 1, 'target')">
                                             <div class="cell-content">
                                                 <span class="val-plain">{{ currentSheetDiff.targetData[r - 1]?.[c - 1]
-                                                    }}</span>
+                                                }}</span>
                                             </div>
                                         </td>
                                     </tr>

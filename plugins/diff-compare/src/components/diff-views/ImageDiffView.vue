@@ -94,12 +94,7 @@ watch([viewMode, sourceImage, targetImage], () => {
 })
 
 // ── File loading ─────────────────────────────────────
-const readFile = (file: File): Promise<string> =>
-    new Promise((resolve) => {
-        const r = new FileReader()
-        r.onload = (e) => resolve(e.target!.result as string)
-        r.readAsDataURL(file)
-    })
+import { readFileAsDataURL } from '@/utils/file'
 
 const handleFileInput = async (e: Event, side: 'source' | 'target') => {
     const input = e.target as HTMLInputElement
@@ -107,10 +102,10 @@ const handleFileInput = async (e: Event, side: 'source' | 'target') => {
     if (!files || files.length === 0) return
 
     if (files.length >= 2) {
-        sourceImage.value = await readFile(files[0])
-        targetImage.value = await readFile(files[1])
+        sourceImage.value = await readFileAsDataURL(files[0])
+        targetImage.value = await readFileAsDataURL(files[1])
     } else {
-        const url = await readFile(files[0])
+        const url = await readFileAsDataURL(files[0])
         if (side === 'source') sourceImage.value = url
         else targetImage.value = url
     }
@@ -129,10 +124,10 @@ const handleDrop = async (e: DragEvent, side: 'source' | 'target') => {
     if (validImages.length === 0) return
 
     if (validImages.length >= 2) {
-        sourceImage.value = await readFile(validImages[0])
-        targetImage.value = await readFile(validImages[1])
+        sourceImage.value = await readFileAsDataURL(validImages[0])
+        targetImage.value = await readFileAsDataURL(validImages[1])
     } else {
-        const url = await readFile(validImages[0])
+        const url = await readFileAsDataURL(validImages[0])
         if (side === 'source') sourceImage.value = url
         else targetImage.value = url
     }
