@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background-dark: #09090B;
+  --color-surface-dark: #111113;
+  --color-primary-dark: #F4F4F5;
+  --color-secondary-dark: #71717A;
+  --color-text-dark: #E4E4E7;
+  --color-border-dark: #27272A;
+  --color-cta-dark: #4ADE80;
+
+  --color-delete-bg-dark: rgba(248, 113, 113, 0.15);
+  --color-insert-bg-dark: rgba(74, 222, 128, 0.15);
+  --color-delete-text-dark: #FCA5A5;
+  --color-insert-text-dark: #86EFAC;
+
+  --color-background-light: #FFFFFF;
+  --color-surface-light: #F8FAFC;
+  --color-primary-light: #1E293B;
+  --color-secondary-light: #64748B;
+  --color-text-light: #0F172A;
+  --color-border-light: #E2E8F0;
+  --color-cta-light: #059669;
+
+  --color-delete-bg-light: rgba(239, 68, 68, 0.12);
+  --color-insert-bg-light: rgba(16, 185, 129, 0.12);
+  --color-delete-text-light: #991B1B;
+  --color-insert-text-light: #065F46;
+}
+
+:root {
+  --color-background: var(--color-background-light);
+  --color-surface: var(--color-surface-light);
+  --color-primary: var(--color-primary-light);
+  --color-secondary: var(--color-secondary-light);
+  --color-text: var(--color-text-light);
+  --color-border: var(--color-border-light);
+  --color-cta: var(--color-cta-light);
+
+  --color-delete-bg: var(--color-delete-bg-light);
+  --color-insert-bg: var(--color-insert-bg-light);
+  --color-delete-text: var(--color-delete-text-light);
+  --color-insert-text: var(--color-insert-text-light);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.10), 0 8px 10px rgba(0, 0, 0, 0.04);
+}
+
+.dark {
+  --color-background: var(--color-background-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-primary: var(--color-primary-dark);
+  --color-secondary: var(--color-secondary-dark);
+  --color-text: var(--color-text-dark);
+  --color-border: var(--color-border-dark);
+  --color-cta: var(--color-cta-dark);
+
+  --color-delete-bg: var(--color-delete-bg-dark);
+  --color-insert-bg: var(--color-insert-bg-dark);
+  --color-delete-text: var(--color-delete-text-dark);
+  --color-insert-text: var(--color-insert-text-dark);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.40), 0 2px 4px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.45), 0 4px 6px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.55), 0 8px 10px rgba(0, 0, 0, 0.40);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.font-mono {
+  font-family: 'Cascadia Code', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
