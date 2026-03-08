@@ -1,12 +1,12 @@
 import { DiffResult, IDiffStrategy } from '../types'
-import { TextDiffStrategy } from '../text/myers'
+import { TextDiffStrategy } from '../text/text'
 
 export class WordDiffStrategy implements IDiffStrategy<string> {
   type = 'word' as const
   private textStrategy = new TextDiffStrategy()
 
-  compute(source: string, target: string): DiffResult {
+  diff(source: string[], target: string[]): DiffResult<string>[] {
     // Word diff is essentially text diff on paragraphs
-    return this.textStrategy.compute(source, target)
+    return this.textStrategy.diff(source, target)
   }
 }

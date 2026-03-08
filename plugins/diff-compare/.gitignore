@@ -39,3 +39,7 @@ Thumbs.db
 .vscode/
 .github
 .shared
+.agents
+.cursor
+.gemini
+.trae

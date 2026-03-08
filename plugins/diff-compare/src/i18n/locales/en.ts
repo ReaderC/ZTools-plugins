@@ -23,7 +23,7 @@ const en = {
   viewSplit: 'Split View',
   viewUnified: 'Unified View',
   diffCount: '+ {added} added  - {removed} removed',
-  computingDiff: 'Computing Diff...',
+  computing: 'Computing Diff...',
 
   // Text Diff
   textMode: 'Text Mode',
@@ -79,6 +79,20 @@ const en = {
   wordEmptyParagraph: 'Empty paragraph',
   wordCompareView: 'Side by Side',
   wordHighlightView: 'Highlight Diff',
+
+  // PDF Diff
+  pdfMode: 'PDF Mode',
+  uploadPdf: 'Click or drag to upload PDF files',
+  pdfSource: 'Source PDF',
+  pdfTarget: 'Target PDF',
+  pdfLoadFailed: 'Failed to load PDF document',
+  pdfRendering: 'Loading PDF...',
+  pdfDiffShort: 'Diff',
+  pdfDiffCount: '{n} differences',
+  pdfNoDiff: 'No text differences found',
+  pdfEmptyLine: 'Empty line',
+  page: 'Page',
+  ocrInitializing: 'Initializing OCR engine...',
 }
 
 export default en

@@ -672,7 +672,7 @@ onUnmounted(() => {
                       ></path>
                     </svg>
                     <span class="text-sm font-bold opacity-70"
-                      >{{ t("computingDiff") || "Computing Diff..." }}</span
+                      >{{ t("computing") || "Computing Diff..." }}</span
                     >
                   </div>
                 </div>

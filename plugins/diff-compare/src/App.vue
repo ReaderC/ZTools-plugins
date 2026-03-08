@@ -5,6 +5,7 @@ import TextDiffView from '@/components/diff-views/TextDiffView.vue'
 import ImageDiffView from '@/components/diff-views/ImageDiffView.vue'
 import ExcelDiffView from '@/components/diff-views/ExcelDiffView.vue'
 import WordDiffView from '@/components/diff-views/WordDiffView.vue'
+import PdfDiffView from '@/components/diff-views/PdfDiffView.vue'
 
 const currentMode = ref('text')
 
@@ -23,6 +24,8 @@ onMounted(() => {
         currentMode.value = 'excel'
       } else if (code === 'diff-word') {
         currentMode.value = 'word'
+      } else if (code === 'diff-pdf') {
+        currentMode.value = 'pdf'
       } else {
         currentMode.value = 'text'
       }
@@ -47,6 +50,9 @@ onMounted(() => {
     </template>
     <template #word>
       <WordDiffView />
+    </template>
+    <template #pdf>
+      <PdfDiffView />
     </template>
   </DiffWorkbench>
 </template>

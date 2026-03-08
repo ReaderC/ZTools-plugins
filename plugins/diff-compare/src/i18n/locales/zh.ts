@@ -23,7 +23,7 @@ const zh = {
   viewSplit: '并排对比',
   viewUnified: '合并对比',
   diffCount: '+ {added} 添加  - {removed} 删除',
-  computingDiff: '正在计算差异...',
+  computing: '正在计算差异...',
 
   // Text Diff
   textMode: '文本对比',
@@ -79,6 +79,20 @@ const zh = {
   wordEmptyParagraph: '空段落',
   wordCompareView: '左右对比',
   wordHighlightView: '差异高亮',
+
+  // PDF Diff
+  pdfMode: 'PDF对比',
+  uploadPdf: '点击或拖拽上传 PDF 文件',
+  pdfSource: '源PDF',
+  pdfTarget: '目标PDF',
+  pdfLoadFailed: 'PDF 文档加载失败',
+  pdfRendering: '正在加载 PDF...',
+  pdfDiffShort: '差异',
+  pdfDiffCount: '{n} 处差异',
+  pdfNoDiff: '未发现文本差异',
+  pdfEmptyLine: '空行',
+  page: '页',
+  ocrInitializing: '正在初始化OCR引擎...',
 }
 
 export default zh

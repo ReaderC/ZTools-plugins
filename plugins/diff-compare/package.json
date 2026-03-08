@@ -4,19 +4,23 @@
   "description": "A ZTools plugin",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 8080",
     "build": "vue-tsc && vite build && node scripts/post-build.js"
   },
   "dependencies": {
+    "diff": "^8.0.3",
     "js-beautify": "^1.15.4",
     "mammoth": "^1.8.0",
+    "pdfjs-dist": "^5.5.207",
     "pinia": "^3.0.4",
     "pixelmatch": "^7.1.0",
+    "tesseract.js": "^7.0.0",
     "vue": "^3.5.13",
     "vue-i18n": "9",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/diff": "^8.0.0",
     "@types/js-beautify": "^1.14.3",
     "@types/pixelmatch": "^5.2.6",
     "@vitejs/plugin-vue": "^5.2.1",

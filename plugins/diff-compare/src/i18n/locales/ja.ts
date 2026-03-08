@@ -23,7 +23,7 @@ const ja = {
   viewSplit: '並べて比較',
   viewUnified: '統合比較',
   diffCount: '+ {added} 追加  - {removed} 削除',
-  computingDiff: '差異を計算中...',
+  computing: '差異を計算中...',
 
   // Text Diff
   textMode: 'テキスト比較',
@@ -79,6 +79,20 @@ const ja = {
   wordEmptyParagraph: '空の段落',
   wordCompareView: '左右比較',
   wordHighlightView: '差異ハイライト',
+
+  // PDF Diff
+  pdfMode: 'PDF比較',
+  uploadPdf: 'PDFファイルをクリックまたはドラッグしてアップロード',
+  pdfSource: 'ソースPDF',
+  pdfTarget: 'ターゲットPDF',
+  pdfLoadFailed: 'PDFドキュメントの読み込みに失敗しました',
+  pdfRendering: 'PDFを読み込み中...',
+  pdfDiffShort: '差異',
+  pdfDiffCount: '{n} 個の差異',
+  pdfNoDiff: 'テキストの差異は見つかりませんでした',
+  pdfEmptyLine: '空行',
+  page: 'ページ',
+  ocrInitializing: 'OCRエンジンを初期化中...',
 }
 
 export default ja

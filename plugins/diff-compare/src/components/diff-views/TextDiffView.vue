@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue";
-import { TextDiffStrategy } from "@/core/diff/text/myers";
-import { DiffChunk } from "@/core/diff/types";
+import { TextDiffStrategy } from "@/core/diff/text/text.ts";
+import { DiffResult } from "@/core/diff/types";
 import { useI18n } from "vue-i18n";
 import ZSelect from "@/components/ui/base/ZSelect.vue";
 import ZTooltip from "@/components/ui/base/ZTooltip.vue";
@@ -65,8 +65,9 @@ const getLangLabel = (langValue: string) => {
 const sourceLangLabel = computed(() => getLangLabel(sourceLang.value));
 const targetLangLabel = computed(() => getLangLabel(targetLang.value));
 
-const diffStrategy = new TextDiffStrategy(); // Still used for type/helper if needed, but worker does main job
-const diffChunks = ref<DiffChunk[]>([]);
+const diffStrategy = new TextDiffStrategy();
+const diffResult = ref<DiffResult<string>[]>([]);
+const diffChunks = computed(() => diffResult.value);
 const isDiffing = ref(false);
 
 let diffWorker: Worker | null = null;
@@ -75,7 +76,7 @@ let debounceTimer: any = null;
 
 watch(
   [sourceText, targetText],
-  ([orig, mod]) => {
+  ([source, target]) => {
     if (debounceTimer) clearTimeout(debounceTimer);
 
     debounceTimer = setTimeout(() => {
@@ -88,7 +89,7 @@ watch(
           const { requestId, result, error } = e.data;
           if (requestId === currentRequestId) {
             if (!error) {
-              diffChunks.value = result.chunks;
+              diffResult.value = result;
             }
             isDiffing.value = false;
           }
@@ -97,10 +98,12 @@ watch(
 
       isDiffing.value = true;
       const requestId = ++currentRequestId;
+      const sourceLines = source === '' ? [] : source.split('\n');
+      const targetLines = target === '' ? [] : target.split('\n');
       diffWorker.postMessage({
         type: "text",
-        source: orig,
-        target: mod,
+        source: sourceLines,
+        target: targetLines,
         requestId,
       });
     }, 300); // 300ms debounce
@@ -125,38 +128,31 @@ const targetLineArr = computed(() =>
 
 // Left lines highlight state
 const leftLinesState = computed(() => {
-  const states: { type: string; subChunks?: DiffChunk[] }[] = [];
+  const states: { type: string }[] = [];
   for (const chunk of diffChunks.value) {
     if (chunk.type === "equal") states.push({ type: "equal" });
     else if (chunk.type === "delete") states.push({ type: "delete" });
-    else if (chunk.type === "modified")
-      states.push({ type: "modified", subChunks: chunk.subChunks });
+    else if (chunk.type === "modify") states.push({ type: "delete" });
   }
   return states;
 });
 
 // Right lines highlight state
 const rightLinesState = computed(() => {
-  const states: { type: string; subChunks?: DiffChunk[] }[] = [];
+  const states: { type: string }[] = [];
   for (const chunk of diffChunks.value) {
     if (chunk.type === "equal") states.push({ type: "equal" });
     else if (chunk.type === "insert") states.push({ type: "insert" });
-    else if (chunk.type === "modified") {
-      // For modified, the right side is the 'insert' content
-      // Need to find the corresponding insert content in subChunks
-      // In processIntraLineDiff, intraTarget was next.value (insert side)
-      // But computeIntraLine(intraSource, intraTarget) returns both.
-      states.push({ type: "modified", subChunks: chunk.subChunks });
-    }
+    else if (chunk.type === "modify") states.push({ type: "insert" });
   }
   return states;
 });
 
 const addedCount = computed(
-  () => diffChunks.value.filter((c) => c.type === "insert").length,
+  () => diffChunks.value.filter((c) => c.type === "insert" || c.type === "modify").length,
 );
 const removedCount = computed(
-  () => diffChunks.value.filter((c) => c.type === "delete").length,
+  () => diffChunks.value.filter((c) => c.type === "delete" || c.type === "modify").length,
 );
 
 // Unified view lines
@@ -166,7 +162,6 @@ const unifiedDiffLines = computed(() => {
     value: string;
     leftNo?: number;
     rightNo?: number;
-    subChunks?: DiffChunk[];
   }[] = [];
   let leftCount = 1;
   let rightCount = 1;
@@ -175,36 +170,24 @@ const unifiedDiffLines = computed(() => {
     if (chunk.type === "equal") {
       lines.push({
         type: "equal",
-        value: chunk.value,
+        value: chunk.source || "",
         leftNo: leftCount++,
         rightNo: rightCount++,
       });
     } else if (chunk.type === "delete") {
-      lines.push({ type: "delete", value: chunk.value, leftNo: leftCount++ });
+      lines.push({ type: "delete", value: chunk.source || "", leftNo: leftCount++ });
     } else if (chunk.type === "insert") {
-      lines.push({ type: "insert", value: chunk.value, rightNo: rightCount++ });
-    } else if (chunk.type === "modified") {
-      // modified is a pairing of delete + insert
-      // For unified view, we show delete then insert
-      // But wait, modified in my myers.ts contains ONLY the subcubChunks of the comparison.
-      // Actually, for unified view, it's better to show them as separate delete/insert lines OR
-      // a special modified line. Standard unified diff shows delete then insert.
-
-      // Re-calculating the insert value from subChunks if needed,
-      // but in myers.ts I put intraSource in chunk.value.
-      // I need the intraTarget too.
-      // Let's adjust myers.ts to include both values in 'modified' chunk for easier rendering.
+      lines.push({ type: "insert", value: chunk.target || "", rightNo: rightCount++ });
+    } else if (chunk.type === "modify") {
       lines.push({
         type: "delete",
-        value: chunk.value,
+        value: chunk.source || "",
         leftNo: leftCount++,
-        subChunks: chunk.subChunks,
       });
       lines.push({
         type: "insert",
-        value: chunk.value2 || "",
+        value: chunk.target || "",
         rightNo: rightCount++,
-        subChunks: chunk.subChunks,
       });
     }
   }
@@ -272,10 +255,10 @@ const goToChange = (dir: "next" | "prev") => {
   let rightLine = 0;
   for (let i = 0; i < chunkIdx; i++) {
     const c = diffChunks.value[i];
-    if (c.type === "equal" || c.type === "delete" || c.type === "modified") {
+    if (c.type === "equal" || c.type === "delete" || c.type === "modify") {
       leftLine += 1;
     }
-    if (c.type === "equal" || c.type === "insert" || c.type === "modified") {
+    if (c.type === "equal" || c.type === "insert" || c.type === "modify") {
       rightLine += 1;
     }
   }
@@ -327,62 +310,29 @@ const handlePaste = (side: "source" | "target") => {
   <div class="flex flex-col h-full gap-4">
     <!-- Toolbar -->
     <div
-      class="h-14 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-between px-5 flex-shrink-0 z-30 shadow-sm relative w-full"
-    >
+      class="h-14 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center justify-between px-5 flex-shrink-0 z-30 shadow-sm relative w-full">
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2">
           <ZBadge variant="surface" size="lg">{{ t("language") }}</ZBadge>
-          <ZSelect
-            v-model="selectedLang"
-            :options="langOptions"
-            class="min-w-[120px]"
-          />
+          <ZSelect v-model="selectedLang" :options="langOptions" class="min-w-[120px]" />
         </div>
 
         <div class="h-4 w-px bg-[var(--color-border)] mx-1"></div>
 
-        <div
-          class="flex bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] p-1 shadow-sm gap-1"
-        >
-          <ZButton
-            :variant="textViewMode === 'split' ? 'primary' : 'surface'"
-            size="sm"
-            @click="textViewMode = 'split'"
-            class="!rounded-md"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
+        <div class="flex bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] p-1 shadow-sm gap-1">
+          <ZButton :variant="textViewMode === 'split' ? 'primary' : 'surface'" size="sm" @click="textViewMode = 'split'"
+            class="!rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
               <line x1="12" y1="3" x2="12" y2="21" />
             </svg>
             {{ t("viewSplit") }}
           </ZButton>
-          <ZButton
-            :variant="textViewMode === 'unified' ? 'primary' : 'surface'"
-            size="sm"
-            @click="textViewMode = 'unified'"
-            class="!rounded-md"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
+          <ZButton :variant="textViewMode === 'unified' ? 'primary' : 'surface'" size="sm"
+            @click="textViewMode = 'unified'" class="!rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
             </svg>
             {{ t("viewUnified") }}
@@ -394,34 +344,16 @@ const handlePaste = (side: "source" | "target") => {
         <div class="flex gap-1">
           <ZTooltip :content="t('prevChange')">
             <ZButton variant="ghost" size="icon-sm" @click="goToChange('prev')">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m18 15-6-6-6 6" />
               </svg>
             </ZButton>
           </ZTooltip>
           <ZTooltip :content="t('nextChange')">
             <ZButton variant="ghost" size="icon-sm" @click="goToChange('next')">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </ZButton>
@@ -430,17 +362,8 @@ const handlePaste = (side: "source" | "target") => {
 
         <ZTooltip :content="t('swapText')">
           <ZButton variant="ghost" size="icon-sm" @click="swapTexts">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <path d="m16 3 4 4-4 4" />
               <path d="M20 7H9a4 4 0 1 0 0 8h1" />
               <path d="m8 21-4-4 4-4" />
@@ -465,33 +388,19 @@ const handlePaste = (side: "source" | "target") => {
 
     <div class="flex-1 min-h-[400px] overflow-hidden">
       <!-- SPLIT MODE -->
-      <div
-        v-if="textViewMode === 'split'"
-        class="grid grid-cols-2 gap-4 h-full"
-      >
+      <div v-if="textViewMode === 'split'" class="grid grid-cols-2 gap-4 h-full">
         <!-- Source Panel -->
         <div
-          class="flex flex-col h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm focus-within:ring-2 transition-all bg-[var(--color-background)]"
-        >
+          class="flex flex-col h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm focus-within:ring-2 transition-all bg-[var(--color-background)]">
           <div
-            class="bg-[var(--color-background)] px-3 py-2 border-b border-[var(--color-border)] flex justify-between items-center h-10"
-          >
+            class="bg-[var(--color-background)] px-3 py-2 border-b border-[var(--color-border)] flex justify-between items-center h-10">
             <div class="flex items-center gap-2">
               <ZBadge variant="surface" size="lg">
                 <template #default>
                   <div class="flex items-center gap-1.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      class="opacity-70"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                      class="opacity-70">
                       <polyline points="16 18 22 12 16 6" />
                       <polyline points="8 6 2 12 8 18" />
                     </svg>
@@ -504,109 +413,52 @@ const handlePaste = (side: "source" | "target") => {
               {{ sourceLangLabel }}
             </ZBadge>
           </div>
-          <div
-            class="relative flex-1 overflow-hidden group w-full h-full flex mt-0"
-          >
+          <div class="relative flex-1 overflow-hidden group w-full h-full flex mt-0">
             <!-- Line Numbers -->
             <div
               class="w-10 bg-[var(--color-surface)] border-r border-[var(--color-border)] flex-shrink-0 flex flex-col font-mono text-[10px] text-[var(--color-secondary)] opacity-40 select-none pt-4 pb-16 leading-6 text-right px-2"
-              ref="leftLineNumbers"
-            >
+              ref="leftLineNumbers">
               <div v-for="(_, i) in sourceLineArr" :key="'ln-l-' + i">
                 {{ i + 1 }}
               </div>
             </div>
 
             <!-- Diff Highlights Backdrop -->
-            <div
-              ref="leftBack"
-              class="absolute inset-x-10 inset-y-0 overflow-hidden pointer-events-none z-0"
-            >
-              <div
-                class="p-4 py-4 pb-16 font-mono text-sm leading-6 whitespace-pre inline-block min-w-full"
-              >
-                <div
-                  v-for="(line, i) in sourceLineArr"
-                  :key="'l-' + i"
-                  :class="[
-                    leftLinesState[i]?.type === 'delete'
-                      ? 'bg-[var(--color-delete-bg)] text-[var(--color-delete-text)]'
-                      : leftLinesState[i]?.type === 'modified'
-                        ? 'bg-[var(--color-delete-bg)]'
-                        : '',
-                    'w-full',
-                  ]"
-                  style="min-height: 1.5rem"
-                >
-                  <template v-if="leftLinesState[i]?.type === 'modified'">
-                    <span
-                      v-for="(sub, si) in leftLinesState[i].subChunks"
-                      :key="'ls-' + si"
-                      :class="[
-                        sub.type === 'delete'
-                          ? 'bg-[var(--color-delete-bg-strong)] text-[var(--color-delete-text)]'
-                          : '',
-                        'selection:bg-transparent text-transparent',
-                      ]"
-                      >{{
-                        sub.type === "insert"
-                          ? ""
-                          : sub.value === ""
-                            ? " "
-                            : sub.value
-                      }}</span
-                    >
-                  </template>
-                  <template v-else>
-                    <span class="text-transparent selection:bg-transparent">{{
-                      line === "" ? " " : line
-                    }}</span>
-                  </template>
+            <div ref="leftBack" class="absolute inset-x-10 inset-y-0 overflow-hidden pointer-events-none z-0">
+              <div class="p-4 py-4 pb-16 font-mono text-sm leading-6 whitespace-pre inline-block min-w-full">
+                <div v-for="(line, i) in sourceLineArr" :key="'l-' + i" :class="[
+                  leftLinesState[i]?.type === 'delete'
+                    ? 'bg-[var(--color-delete-bg)] text-[var(--color-delete-text)]'
+                    : '',
+                  'w-full',
+                ]" style="min-height: 1.5rem">
+                  <span class="text-transparent selection:bg-transparent">{{
+                    line === "" ? " " : line
+                  }}</span>
                 </div>
-                <div
-                  v-if="sourceLineArr.length === 0"
-                  style="min-height: 1.5rem"
-                ></div>
+                <div v-if="sourceLineArr.length === 0" style="min-height: 1.5rem"></div>
               </div>
             </div>
             <!-- Editable Textarea -->
-            <textarea
-              ref="leftTextarea"
-              v-model="sourceText"
-              @scroll="onLeftScroll"
-              @paste="handlePaste('source')"
+            <textarea ref="leftTextarea" v-model="sourceText" @scroll="onLeftScroll" @paste="handlePaste('source')"
               class="relative block w-full h-full bg-transparent text-[var(--color-text)] caret-[var(--color-text)] p-4 py-4 pb-16 font-mono text-sm leading-6 resize-none outline-none z-10 whitespace-pre"
-              wrap="off"
-              spellcheck="false"
-              :placeholder="t('pasteSource')"
-            >
-            </textarea>
+              wrap="off" spellcheck="false" :placeholder="t('pasteSource')">
+  </textarea>
           </div>
         </div>
 
         <!-- Target Panel -->
         <div
-          class="flex flex-col h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm focus-within:ring-2 transition-all bg-[var(--color-background)]"
-        >
+          class="flex flex-col h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm focus-within:ring-2 transition-all bg-[var(--color-background)]">
           <div
-            class="bg-[var(--color-background)] px-3 py-2 border-b border-[var(--color-border)] flex justify-between items-center h-10"
-          >
+            class="bg-[var(--color-background)] px-3 py-2 border-b border-[var(--color-border)] flex justify-between items-center h-10">
             <div class="flex items-center gap-2">
               <ZBadge variant="surface" size="lg">
                 <template #default>
                   <div class="flex items-center gap-1.5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="3"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      class="opacity-70"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                      class="opacity-70">
                       <polyline points="16 18 22 12 16 6" />
                       <polyline points="8 6 2 12 8 18" />
                     </svg>
@@ -619,121 +471,62 @@ const handlePaste = (side: "source" | "target") => {
               {{ targetLangLabel }}
             </ZBadge>
           </div>
-          <div
-            class="relative flex-1 overflow-hidden group w-full h-full flex mt-0"
-          >
+          <div class="relative flex-1 overflow-hidden group w-full h-full flex mt-0">
             <!-- Line Numbers -->
             <div
               class="w-10 bg-[var(--color-surface)] border-r border-[var(--color-border)] flex-shrink-0 flex flex-col font-mono text-[10px] text-[var(--color-secondary)] opacity-40 select-none pt-4 pb-16 leading-6 text-right px-2"
-              ref="rightLineNumbers"
-            >
+              ref="rightLineNumbers">
               <div v-for="(_, i) in targetLineArr" :key="'ln-r-' + i">
                 {{ i + 1 }}
               </div>
             </div>
 
             <!-- Diff Highlights Backdrop -->
-            <div
-              ref="rightBack"
-              class="absolute inset-x-10 inset-y-0 overflow-hidden pointer-events-none z-0"
-            >
-              <div
-                class="p-4 py-4 pb-16 font-mono text-sm leading-6 whitespace-pre inline-block min-w-full"
-              >
-                <div
-                  v-for="(line, i) in targetLineArr"
-                  :key="'r-' + i"
-                  :class="[
-                    rightLinesState[i]?.type === 'insert'
-                      ? 'bg-[var(--color-insert-bg)] text-[var(--color-insert-text)]'
-                      : rightLinesState[i]?.type === 'modified'
-                        ? 'bg-[var(--color-insert-bg)]'
-                        : '',
-                    'w-full',
-                  ]"
-                  style="min-height: 1.5rem"
-                >
-                  <template v-if="rightLinesState[i]?.type === 'modified'">
-                    <span
-                      v-for="(sub, si) in rightLinesState[i].subChunks"
-                      :key="'rs-' + si"
-                      :class="[
-                        sub.type === 'insert'
-                          ? 'bg-[var(--color-insert-bg-strong)] text-[var(--color-insert-text)]'
-                          : '',
-                        'selection:bg-transparent text-transparent',
-                      ]"
-                      >{{
-                        sub.type === "delete"
-                          ? ""
-                          : sub.value === ""
-                            ? " "
-                            : sub.value
-                      }}</span
-                    >
-                  </template>
-                  <template v-else>
-                    <span class="text-transparent selection:bg-transparent">{{
-                      line === "" ? " " : line
-                    }}</span>
-                  </template>
+            <div ref="rightBack" class="absolute inset-x-10 inset-y-0 overflow-hidden pointer-events-none z-0">
+              <div class="p-4 py-4 pb-16 font-mono text-sm leading-6 whitespace-pre inline-block min-w-full">
+                <div v-for="(line, i) in targetLineArr" :key="'r-' + i" :class="[
+                  rightLinesState[i]?.type === 'insert'
+                    ? 'bg-[var(--color-insert-bg)] text-[var(--color-insert-text)]'
+                    : '',
+                  'w-full',
+                ]" style="min-height: 1.5rem">
+                  <span class="text-transparent selection:bg-transparent">{{
+                    line === "" ? " " : line
+                  }}</span>
                 </div>
-                <div
-                  v-if="targetLineArr.length === 0"
-                  style="min-height: 1.5rem"
-                ></div>
+                <div v-if="targetLineArr.length === 0" style="min-height: 1.5rem"></div>
               </div>
             </div>
             <!-- Editable Textarea -->
-            <textarea
-              ref="rightTextarea"
-              v-model="targetText"
-              @scroll="onRightScroll"
-              @paste="handlePaste('target')"
+            <textarea ref="rightTextarea" v-model="targetText" @scroll="onRightScroll" @paste="handlePaste('target')"
               class="relative block w-full h-full bg-transparent text-[var(--color-text)] caret-[var(--color-text)] p-4 py-4 pb-16 font-mono text-sm leading-6 resize-none outline-none z-10 whitespace-pre"
-              wrap="off"
-              spellcheck="false"
-              :placeholder="t('pasteTarget')"
-            >
-            </textarea>
+              wrap="off" spellcheck="false" :placeholder="t('pasteTarget')">
+    </textarea>
           </div>
         </div>
       </div>
 
       <!-- UNIFIED MODE -->
-      <div
-        v-else
-        class="h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm bg-[var(--color-background)] flex flex-col"
-      >
+      <div v-else
+        class="h-full rounded-lg border border-[var(--color-border)] overflow-hidden shadow-sm bg-[var(--color-background)] flex flex-col">
         <div
-          class="bg-[var(--color-background)] px-4 py-2 border-b border-[var(--color-border)] h-10 flex items-center"
-        >
+          class="bg-[var(--color-background)] px-4 py-2 border-b border-[var(--color-border)] h-10 flex items-center">
           <ZBadge variant="surface" size="lg">{{ t("viewUnified") }}</ZBadge>
         </div>
-        <div
-          class="flex-1 overflow-auto bg-[var(--color-background)] custom-scrollbar"
-        >
-          <div
-            class="min-w-fit w-full font-mono text-sm leading-6 flex flex-col"
-          >
-            <div
-              v-for="(line, i) in unifiedDiffLines"
-              :key="'u-' + i"
-              class="flex group hover:bg-[var(--color-surface)] transition-colors"
-            >
+        <div class="flex-1 overflow-auto bg-[var(--color-background)] custom-scrollbar">
+          <div class="min-w-fit w-full font-mono text-sm leading-6 flex flex-col">
+            <div v-for="(line, i) in unifiedDiffLines" :key="'u-' + i"
+              class="flex group hover:bg-[var(--color-surface)] transition-colors">
               <div
-                class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-[var(--color-secondary)] opacity-40 select-none bg-[var(--color-surface)] border-r border-[var(--color-border)]"
-              >
+                class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-[var(--color-secondary)] opacity-40 select-none bg-[var(--color-surface)] border-r border-[var(--color-border)]">
                 {{ line.leftNo || "" }}
               </div>
               <div
-                class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-[var(--color-secondary)] opacity-40 select-none bg-[var(--color-surface)] border-r border-[var(--color-border)]"
-              >
+                class="w-10 flex-shrink-0 text-right pr-2 text-[10px] text-[var(--color-secondary)] opacity-40 select-none bg-[var(--color-surface)] border-r border-[var(--color-border)]">
                 {{ line.rightNo || "" }}
               </div>
               <div
-                class="w-8 flex-shrink-0 text-center text-[var(--color-secondary)] opacity-50 select-none border-r border-[var(--color-border)] bg-[var(--color-surface)]"
-              >
+                class="w-8 flex-shrink-0 text-center text-[var(--color-secondary)] opacity-50 select-none border-r border-[var(--color-border)] bg-[var(--color-surface)]">
                 {{
                   line.type === "insert"
                     ? "+"
@@ -742,38 +535,16 @@ const handlePaste = (side: "source" | "target") => {
                       : " "
                 }}
               </div>
-              <div
-                :class="[
-                  'flex-1 px-4 whitespace-pre',
-                  line.type === 'insert'
-                    ? 'bg-[var(--color-insert-bg)] text-[var(--color-insert-text)]'
-                    : '',
-                  line.type === 'delete'
-                    ? 'bg-[var(--color-delete-bg)] text-[var(--color-delete-text)]'
-                    : '',
-                ]"
-              >
-                <template v-if="line.subChunks">
-                  <span
-                    v-for="(sub, si) in line.subChunks"
-                    :key="'us-' + si"
-                    :class="[
-                      line.type === 'delete' && sub.type === 'delete'
-                        ? 'bg-[var(--color-delete-bg-strong)]'
-                        : '',
-                      line.type === 'insert' && sub.type === 'insert'
-                        ? 'bg-[var(--color-insert-bg-strong)]'
-                        : '',
-                    ]"
-                    >{{
-                      sub.type ===
-                      (line.type === "delete" ? "insert" : "delete")
-                        ? ""
-                        : sub.value
-                    }}</span
-                  >
-                </template>
-                <template v-else>{{ line.value }}</template>
+              <div :class="[
+                'flex-1 px-4 whitespace-pre',
+                line.type === 'insert'
+                  ? 'bg-[var(--color-insert-bg)] text-[var(--color-insert-text)]'
+                  : '',
+                line.type === 'delete'
+                  ? 'bg-[var(--color-delete-bg)] text-[var(--color-delete-text)]'
+                  : '',
+              ]">
+                {{ line.value }}
               </div>
             </div>
           </div>

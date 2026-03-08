@@ -1,10 +1,10 @@
 import { DiffResult, IDiffStrategy } from '../types'
 import { normalizeString } from '../../../utils/string'
 
-export class ExcelDiffStrategy implements IDiffStrategy<any[][]> {
+export class ExcelDiffStrategy implements IDiffStrategy<any[]> {
   type = 'excel' as const
 
-  compute(source: any[][], target: any[][]): DiffResult {
+  diff(source: any[][], target: any[][]): DiffResult<any[]>[] {
     const diffs: any[] = []
     const maxRows = Math.max(source.length, target.length)
     let maxCols = 0
