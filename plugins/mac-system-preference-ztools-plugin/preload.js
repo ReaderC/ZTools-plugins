@@ -180,25 +180,6 @@ const commands = [
 
 ytools.onPluginEnter(({ code, type, payload }) => {
     console.log('插件/进入', code, type, payload)
-    // console.log('md5', md5)
-    // return
-    // 打开 Mac 显示器设置
-    if (code === 'preference.displays') {
-        const command = commands.find(c => c.code === code)
-        exec(`open "${command.urlScheme}"`, (error) => {
-            if (error) {
-                console.error('打开显示器设置失败:', error)
-            }
-        })
-    }
-    else if (code === 'home') {
-        const command = commands.find(c => c.code === code)
-        exec(`open "${command.urlScheme}"`, (error) => {
-            if (error) {
-                console.error('打开主页设置失败:', error)
-            }
-        })
-    }
 
     ytools.hideMainWindow()
     ytools.outPlugin()
