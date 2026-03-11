@@ -23,6 +23,7 @@ const {
   loadError,
   ocrStatus,
   ocrEngine,
+  zoom,
   bothLoaded,
   diffBlocks,
   isDiffing,
@@ -33,7 +34,10 @@ const {
   processPaste,
   scrollToBlock,
   goToNextDiff,
-  goToPrevDiff
+  goToPrevDiff,
+  zoomIn,
+  zoomOut,
+  zoomReset
 } = usePdfDiff()
 
 const handleClear = () => clearItems(sourceViewerRef.value, targetViewerRef.value)
@@ -52,6 +56,9 @@ const handleFile = (e: Event, side: "source" | "target") => {
 const handlePaste = (e: ClipboardEvent) => {
   processPaste(e, () => sourceViewerRef.value, () => targetViewerRef.value)
 }
+const handleZoomIn = () => zoomIn(sourceViewerRef.value, targetViewerRef.value)
+const handleZoomOut = () => zoomOut(sourceViewerRef.value, targetViewerRef.value)
+const handleZoomReset = () => zoomReset(sourceViewerRef.value, targetViewerRef.value)
 
 onMounted(() => {
   window.addEventListener("paste", handlePaste)
@@ -65,7 +72,7 @@ onUnmounted(() => {
   <div class="pdf-root flex flex-col h-full overflow-hidden">
     <!-- Toolbar -->
     <div
-      class="h-11 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center gap-3 px-4 flex-shrink-0 z-30 shadow-sm">
+      class="h-14 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center gap-3 px-4 flex-shrink-0 z-30 shadow-sm">
       <!-- 左侧：源文件名 -->
       <div class="w-[180px] min-w-0 flex items-center gap-2 flex-shrink-0">
         <ZBadge v-if="sourceFileName" :title="sourceFileName" variant="surface" size="lg">
@@ -76,11 +83,10 @@ onUnmounted(() => {
         </ZBadge>
       </div>
 
-      <!-- 中间：OCR选择 + 差异数量 + 导航 -->
+      <!-- 中间：识别引擎选择 + 差异数量 + 导航 -->
       <div class="flex-1 flex items-center justify-center gap-2 min-w-0">
-        <!-- OCR引擎选择 -->
+        <!-- 识别引擎选择 -->
         <div class="flex items-center gap-1 mr-2">
-          <span class="text-xs text-[var(--color-secondary)] mr-1">OCR:</span>
           <ZTooltip content="PDF.js内置文本提取 (快速，适用于可选中文本)">
             <ZButton variant="ghost" size="sm" :active="ocrEngine === 'pdfjs'" @click="ocrEngine = 'pdfjs'"
               class="!px-2 !h-6 text-xs">
@@ -95,13 +101,29 @@ onUnmounted(() => {
           </ZTooltip>
         </div>
 
+        <!-- 缩放控制 -->
+        <div class="flex items-center gap-1 mr-2" v-if="bothLoaded">
+          <ZTooltip :content="t('zoomOut')">
+            <ZButton variant="ghost" size="icon-sm" @click="handleZoomOut" class="!w-6 !h-6">
+              <ZIcon name="zoom-out" :size="14" />
+            </ZButton>
+          </ZTooltip>
+          <ZTooltip :content="t('zoomReset')">
+            <ZButton variant="ghost" size="sm" @click="handleZoomReset" class="!px-2 !h-6 text-xs min-w-[50px]">
+              {{ Math.round(zoom * 100) }}%
+            </ZButton>
+          </ZTooltip>
+          <ZTooltip :content="t('zoomIn')">
+            <ZButton variant="ghost" size="icon-sm" @click="handleZoomIn" class="!w-6 !h-6">
+              <ZIcon name="zoom-in" :size="14" />
+            </ZButton>
+          </ZTooltip>
+        </div>
+
         <template v-if="bothLoaded">
           <div v-if="diffCount > 0" class="flex items-center gap-1.5">
             <div
               class="flex items-center gap-1.5 bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] px-2 py-1">
-              <span class="text-xs font-medium text-[var(--color-cta)] cursor-pointer" @click="handleNext">
-                {{ t("pdfDiffCount", { n: diffCount }) }}
-              </span>
               <PrevNextButtons :prev-label="t('prevChange')" :next-label="t('nextChange')" @prev="handlePrev"
                 @next="handleNext" />
             </div>
@@ -112,9 +134,9 @@ onUnmounted(() => {
         </template>
 
         <ZTooltip :content="t('clearItems')" v-if="bothLoaded">
-          <ZButton variant="ghost" size="icon-sm" @click="handleClear"
+          <ZButton variant="danger" size="icon-sm" @click="handleClear"
             class="!w-6 !h-6 text-[var(--color-secondary)] hover:text-[var(--color-text)]">
-            <ZIcon name="trash" :size="16" />
+            <ZIcon name="trash" :size="14" />
           </ZButton>
         </ZTooltip>
       </div>

@@ -412,15 +412,15 @@ onUnmounted(() => {
           </ZButton>
         </div>
 
-        <!-- Clear Button: 清空按钮 -->
-        <div class="flex items-center gap-1">
-          <ZTooltip :content="t('clearItems')" position="bottom">
-            <ZButton variant="ghost" size="icon-sm" @click="onTextClear" :disabled="!sourceText && !targetText"
-              class="!w-8 !h-8 !p-0">
-              <ZIcon name="trash" :size="16" />
-            </ZButton>
-          </ZTooltip>
-        </div>
+      </div>
+      <!-- Clear Button: 清空按钮 -->
+      <div class="flex items-center gap-1">
+        <ZTooltip :content="t('clearItems')" position="bottom">
+          <ZButton variant="danger" size="sm" @click="onTextClear" :disabled="!sourceText && !targetText">
+            <ZIcon name="trash" :size="14" />
+            {{ t('clearItems') }}
+          </ZButton>
+        </ZTooltip>
       </div>
     </div>
 

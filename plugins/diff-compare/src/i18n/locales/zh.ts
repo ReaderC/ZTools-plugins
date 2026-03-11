@@ -77,7 +77,6 @@ const zh = {
   wordDiffTitle: '段落差异',
   wordDiffSubtitle: '中间栏展示两份文档的段落级变更',
   wordDiffShort: '差异',
-  wordDiffCount: '{n} 处差异',
   wordDiffEmpty: '还没有可比较的文档',
   wordDiffWaiting: '等待另一份文档',
   wordDiffWaitingHint: '两侧都加载完成后，这里会生成差异列表。',
@@ -94,12 +93,14 @@ const zh = {
   pdfLoadFailed: 'PDF 文档加载失败',
   pdfRendering: '正在加载 PDF...',
   pdfDiffShort: '差异',
-  pdfDiffCount: '{n} 处差异',
   pdfNoDiff: '未发现文本差异',
   pdfEmptyLine: '空行',
   page: '页',
   ocrInitializing: '正在初始化OCR引擎...',
   ocrProcessing: '正在处理PDF...',
+  zoomIn: '放大',
+  zoomOut: '缩小',
+  zoomReset: '重置缩放',
 }
 
 export default zh

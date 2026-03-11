@@ -57,7 +57,7 @@ onUnmounted(() => {
   <div class="word-root flex flex-col h-full overflow-hidden">
     <!-- Toolbar: 左文件名 | 中间差异 | 右文件名 -->
     <div
-      class="h-11 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center gap-3 px-4 flex-shrink-0 z-30 shadow-sm">
+      class="h-14 border-b border-[var(--color-border)] bg-[var(--color-background)] flex items-center gap-3 px-4 flex-shrink-0 z-30 shadow-sm">
       <!-- 左侧：源文件名 -->
       <div class="w-[180px] min-w-0 flex items-center gap-2 flex-shrink-0">
         <ZBadge v-if="sourceFileName" :title="sourceFileName" variant="surface" size="lg">{{ sourceFileName }}
@@ -72,10 +72,6 @@ onUnmounted(() => {
         <template v-if="bothLoaded">
           <div v-if="diffCount > 0"
             class="flex items-center gap-1.5 bg-[var(--color-surface)] rounded-md border border-[var(--color-border)] px-2 py-1">
-            <span class="text-xs font-medium text-[var(--color-cta)] cursor-pointer hover:underline"
-              @click="handleNext">
-              {{ t("wordDiffCount", { n: diffCount }) }}
-            </span>
             <PrevNextButtons :prev-label="t('prevChange')" :next-label="t('nextChange')" @prev="handlePrev"
               @next="handleNext" />
           </div>

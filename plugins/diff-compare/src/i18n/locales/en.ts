@@ -77,7 +77,6 @@ const en = {
   wordDiffTitle: 'Paragraph Diff',
   wordDiffSubtitle: 'The center column lists paragraph-level changes between both documents',
   wordDiffShort: 'Diff',
-  wordDiffCount: '{n} differences',
   wordDiffEmpty: 'No documents to compare yet',
   wordDiffWaiting: 'Waiting for the other document',
   wordDiffWaitingHint: 'The diff list will appear here after both sides are loaded.',
@@ -94,12 +93,14 @@ const en = {
   pdfLoadFailed: 'Failed to load PDF document',
   pdfRendering: 'Loading PDF...',
   pdfDiffShort: 'Diff',
-  pdfDiffCount: '{n} differences',
   pdfNoDiff: 'No text differences found',
   pdfEmptyLine: 'Empty line',
   page: 'Page',
   ocrInitializing: 'Initializing OCR engine...',
   ocrProcessing: 'Processing PDF...',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  zoomReset: 'Reset zoom',
 }
 
 export default en

@@ -8,6 +8,7 @@ import 'virtual:svg-icons-register'
 import '@/assets/styles/main.scss'
 import App from './App.vue'
 import i18n from './i18n'
+import '@/utils/polyfills'
 
 /**
  * 创建 Vue 应用实例

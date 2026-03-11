@@ -77,7 +77,6 @@ const ja = {
   wordDiffTitle: '段落の差異',
   wordDiffSubtitle: '中央の列に両ドキュメントの段落レベルの変更が表示されます',
   wordDiffShort: '差異',
-  wordDiffCount: '{n} 個の差異',
   wordDiffEmpty: '比較するドキュメントがまだありません',
   wordDiffWaiting: 'もう一方のドキュメントを待機中',
   wordDiffWaitingHint: '両方が読み込まれると、ここに差異リストが生成されます。',
@@ -94,12 +93,14 @@ const ja = {
   pdfLoadFailed: 'PDFドキュメントの読み込みに失敗しました',
   pdfRendering: 'PDFを読み込み中...',
   pdfDiffShort: '差異',
-  pdfDiffCount: '{n} 個の差異',
   pdfNoDiff: 'テキストの差異は見つかりませんでした',
   pdfEmptyLine: '空行',
   page: 'ページ',
   ocrInitializing: 'OCRエンジンを初期化中...',
   ocrProcessing: 'PDFを処理中...',
+  zoomIn: '拡大',
+  zoomOut: '縮小',
+  zoomReset: 'ズームをリセット',
 }
 
 export default ja

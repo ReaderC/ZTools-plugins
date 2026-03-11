@@ -1,4 +1,4 @@
-import { ref, shallowRef, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, shallowRef, computed, onUnmounted, nextTick } from 'vue'
 import { toRaw, markRaw } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
 import type { IOcrEngine, OcrConfig } from '@/core/ocr'
@@ -7,7 +7,8 @@ import { TextItem } from '@/core/diff/pdf/pdf.ts'
 import { readFileAsArrayBuffer } from '@/utils/file'
 import { getNextIndex, getPrevIndex } from '@/utils/diffNavigation'
 
-import 'pdfjs-dist/build/pdf.worker.min.mjs'
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
 interface DiffBlock {
     type: 'equal' | 'delete' | 'insert' | 'modify'
@@ -87,18 +88,19 @@ export function usePdfDiff() {
     const loadError = ref('')
     const ocrStatus = ref('')
     const ocrEngine = ref<'pdfjs' | 'tesseract'>('pdfjs')
+    const zoom = ref(1.2)
 
-    const sourcePdfDoc = shallowRef<pdfjsLib.PDFDocumentProxy | null>(null)
-    const targetPdfDoc = shallowRef<pdfjsLib.PDFDocumentProxy | null>(null)
-    const sourceTextItems = ref<TextItem[]>([])
-    const targetTextItems = ref<TextItem[]>([])
+    const sourcePdfDoc = shallowRef<any>(null)
+    const targetPdfDoc = shallowRef<any>(null)
+    const sourceTextItems = shallowRef<TextItem[]>([])
+    const targetTextItems = shallowRef<TextItem[]>([])
 
     const bothLoaded = computed(() => {
         return !!sourcePdfDoc.value && !!targetPdfDoc.value
     })
 
-    const diffBlocks = ref<DiffBlock[]>([])
-    const diffHighlights = ref<{ source: DiffHighlight[]; target: DiffHighlight[] }>({ source: [], target: [] })
+    const diffBlocks = shallowRef<DiffBlock[]>([])
+    const diffHighlights = shallowRef<{ source: DiffHighlight[]; target: DiffHighlight[] }>({ source: [], target: [] })
     const isDiffing = ref(false)
     const activeBlockIdx = ref(-1)
 
@@ -106,7 +108,9 @@ export function usePdfDiff() {
     let diffWorker: Worker | null = null
     let currentRequestId = 0
 
-    const diffCount = computed(() => diffBlocks.value.filter(b => b.type !== 'equal').length)
+    const diffCount = computed(() => {
+        return diffBlocks.value.filter(b => b.type !== 'equal').length
+    })
 
     const initOcrEngine = async (): Promise<IOcrEngine> => {
         if (ocrEngineInstance && ocrEngineInstance.name === ocrEngine.value) {
@@ -185,7 +189,7 @@ export function usePdfDiff() {
             ctx.fillStyle = 'white'
             ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-            await page.render({ canvasContext: ctx, viewport, canvas }).promise
+            await page.render({ canvasContext: ctx, canvas, viewport }).promise
 
             const imageUrl = canvas.toDataURL('image/png')
             const ocrResults = await engine.recognize(imageUrl)
@@ -213,7 +217,7 @@ export function usePdfDiff() {
 
     const renderPage = async (pdf: pdfjsLib.PDFDocumentProxy, pageNum: number, container: HTMLElement, highlights: DiffHighlight[] = []): Promise<void> => {
         const page = await pdf.getPage(pageNum)
-        const scale = 1.2
+        const scale = zoom.value
         const viewport = page.getViewport({ scale })
 
         const pageWrapper = document.createElement('div')
@@ -231,7 +235,7 @@ export function usePdfDiff() {
         canvas.width = viewport.width
         canvas.height = viewport.height
 
-        await page.render({ canvasContext: ctx, viewport, canvas }).promise
+        await page.render({ canvasContext: ctx, canvas, viewport }).promise
         canvasContainer.appendChild(canvas)
 
         const pageHighlights = highlights.filter(h => h.pageNum === pageNum)
@@ -264,17 +268,43 @@ export function usePdfDiff() {
         container.appendChild(pageWrapper)
     }
 
-    const renderPdf = async (pdf: pdfjsLib.PDFDocumentProxy, container: HTMLElement, highlights: DiffHighlight[] = []): Promise<void> => {
+    const renderPdf = async (pdf: pdfjsLib.PDFDocumentProxy, container: HTMLElement, highlights: DiffHighlight[] = [], preserveScroll = true): Promise<void> => {
+        const scrollTop = preserveScroll ? container.parentElement?.scrollTop || 0 : 0
         container.innerHTML = ''
         const numPages = pdf.numPages
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
             await renderPage(pdf, pageNum, container, highlights)
         }
+        if (preserveScroll && container.parentElement) {
+            container.parentElement.scrollTop = scrollTop
+        }
+    }
+
+    const setZoom = async (newZoom: number, sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null) => {
+        zoom.value = Math.max(0.3, Math.min(newZoom, 5))
+        if (sourcePdfDoc.value && sourceViewerRef) {
+            await renderPdf(sourcePdfDoc.value, sourceViewerRef, diffHighlights.value.source, true)
+        }
+        if (targetPdfDoc.value && targetViewerRef) {
+            await renderPdf(targetPdfDoc.value, targetViewerRef, diffHighlights.value.target, true)
+        }
+    }
+
+    const zoomIn = (sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null) => {
+        setZoom(zoom.value + 0.2, sourceViewerRef, targetViewerRef)
+    }
+
+    const zoomOut = (sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null) => {
+        setZoom(zoom.value - 0.2, sourceViewerRef, targetViewerRef)
+    }
+
+    const zoomReset = (sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null) => {
+        setZoom(1.2, sourceViewerRef, targetViewerRef)
     }
 
     const computeDiff = async (srcItems: TextItem[], tgtItems: TextItem[], sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null): Promise<void> => {
         if (srcItems.length === 0 || tgtItems.length === 0) {
-            diffBlocks.value = []
+            diffBlocks.value = markRaw([])
             return
         }
 
@@ -331,8 +361,8 @@ export function usePdfDiff() {
                 }
             }
 
-            diffBlocks.value = blocks
-            diffHighlights.value = { source: sourceHighlights, target: targetHighlights }
+            diffBlocks.value = markRaw(blocks)
+            diffHighlights.value = markRaw({ source: sourceHighlights, target: targetHighlights })
 
             await nextTick()
             await renderHighlights(sourceViewerRef, targetViewerRef)
@@ -351,22 +381,16 @@ export function usePdfDiff() {
         if (!sourceViewerRef || !targetViewerRef) return
         if (!sourcePdfDoc.value || !targetPdfDoc.value) return
 
-        const sourceScrollTop = sourceViewerRef.parentElement?.scrollTop || 0
-        const targetScrollTop = targetViewerRef.parentElement?.scrollTop || 0
-
         await renderPdf(sourcePdfDoc.value, sourceViewerRef, diffHighlights.value.source)
         await renderPdf(targetPdfDoc.value, targetViewerRef, diffHighlights.value.target)
-
-        if (sourceViewerRef.parentElement) sourceViewerRef.parentElement.scrollTop = sourceScrollTop
-        if (targetViewerRef.parentElement) targetViewerRef.parentElement.scrollTop = targetScrollTop
     }
 
     const processAfterFileLoad = async (sourceViewerRef: HTMLElement | null, targetViewerRef: HTMLElement | null) => {
         if (ocrEngine.value === 'tesseract') {
             if (sourcePdfDoc.value && targetPdfDoc.value) {
                 const [items1, items2] = await Promise.all([extractTextItems(sourcePdfDoc.value), extractTextItems(targetPdfDoc.value)])
-                sourceTextItems.value = items1
-                targetTextItems.value = items2
+                sourceTextItems.value = markRaw(items1)
+                targetTextItems.value = markRaw(items2)
 
                 await nextTick()
                 await Promise.all([
@@ -379,14 +403,14 @@ export function usePdfDiff() {
         } else {
             if (sourcePdfDoc.value && sourceTextItems.value.length === 0) {
                 const items = await extractTextItemsFromPdf(sourcePdfDoc.value)
-                sourceTextItems.value = items
+                sourceTextItems.value = markRaw(items)
                 if (sourceViewerRef) {
                     await renderPdf(sourcePdfDoc.value, sourceViewerRef)
                 }
             }
             if (targetPdfDoc.value && targetTextItems.value.length === 0) {
                 const items = await extractTextItemsFromPdf(targetPdfDoc.value)
-                targetTextItems.value = items
+                targetTextItems.value = markRaw(items)
                 if (targetViewerRef) await renderPdf(targetPdfDoc.value, targetViewerRef)
             }
             if (sourceTextItems.value.length > 0 && targetTextItems.value.length > 0) {
@@ -440,10 +464,10 @@ export function usePdfDiff() {
         sourceFileName.value = ''
         targetFileName.value = ''
         loadError.value = ''
-        sourceTextItems.value = []
-        targetTextItems.value = []
-        diffBlocks.value = []
-        diffHighlights.value = { source: [], target: [] }
+        sourceTextItems.value = markRaw([])
+        targetTextItems.value = markRaw([])
+        diffBlocks.value = markRaw([])
+        diffHighlights.value = markRaw({ source: [], target: [] })
         activeBlockIdx.value = -1
         ocrStatus.value = ''
         if (sourceViewerRef) sourceViewerRef.innerHTML = ''
@@ -543,6 +567,7 @@ export function usePdfDiff() {
         loadError,
         ocrStatus,
         ocrEngine,
+        zoom,
         sourcePdfDoc,
         targetPdfDoc,
         bothLoaded,
@@ -557,6 +582,10 @@ export function usePdfDiff() {
         processPaste,
         scrollToBlock,
         goToNextDiff,
-        goToPrevDiff
+        goToPrevDiff,
+        setZoom,
+        zoomIn,
+        zoomOut,
+        zoomReset
     }
 }
