@@ -1,6 +1,7 @@
 let allWifiData = [];
 let filteredData = [];
 let currentFilter = 'all';
+let isInitialized = false;
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
@@ -20,8 +21,10 @@ const togglePasswordBtn = document.getElementById('togglePasswordBtn');
 const copyPasswordBtn = document.getElementById('copyPasswordBtn');
 
 function init() {
+    if (isInitialized) return;
     bindEvents();
     loadData();
+    isInitialized = true;
 }
 
 async function loadData() {
@@ -83,6 +86,9 @@ function bindEvents() {
 
     // Toggle password visibility
     togglePasswordBtn.addEventListener('click', () => {
+        if (!modalInputPassword.value || modalInputPassword.value === '正在获取密码...' || modalInputPassword.value === '无') {
+            return;
+        }
         if (modalInputPassword.type === 'password') {
             modalInputPassword.type = 'text';
             togglePasswordBtn.textContent = '隐藏密码';
