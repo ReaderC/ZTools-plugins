@@ -58,9 +58,25 @@ function getPluginInfo(pluginName) {
  * 检测插件使用的包管理器
  */
 function detectPackageManager(pluginPath) {
+  // 1. 优先检查 package.json 中的 packageManager 字段
+  const packageJsonPath = join(pluginPath, 'package.json');
+  if (existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+      if (packageJson.packageManager) {
+        if (packageJson.packageManager.startsWith('pnpm')) return 'pnpm';
+        if (packageJson.packageManager.startsWith('npm')) return 'npm';
+      }
+    } catch (e) {
+      // 解析失败忽略，继续通过 lock 文件判断
+    }
+  }
+
+  // 2. 检查 lock 文件作为降级方案
   if (existsSync(join(pluginPath, 'pnpm-lock.yaml'))) {
     return 'pnpm';
   }
+  
   return 'npm';
 }
 
