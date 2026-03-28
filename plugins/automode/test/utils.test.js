@@ -405,6 +405,33 @@ describe('lib/utils.js', () => {
     });
   });
 
+  describe('buildInvokeRestJsonCommand(url, timeoutSec)', () => {
+    it('should build a direct PowerShell invocation without shell wrapping', () => {
+      const command = utils.buildInvokeRestJsonCommand(
+        "https://example.com/search?name=O'Hare",
+        10
+      );
+
+      assert.equal(command.file.toLowerCase(), 'powershell.exe');
+      assert.deepEqual(command.args.slice(0, 2), ['-NoProfile', '-Command']);
+      assert.equal(typeof command.args[2], 'string');
+      assert.ok(command.args[2].includes('Invoke-RestMethod -Uri'));
+      assert.ok(command.args[2].includes("O''Hare"));
+      assert.ok(command.args[2].includes('ConvertTo-Json -Compress -Depth 8'));
+      assert.ok(!command.args[2].includes('powershell -Command "'));
+    });
+  });
+
+  describe('buildGeocodeSearchUrl(query)', () => {
+    it('should request Chinese-localized geocoding results for city search', () => {
+      const url = utils.buildGeocodeSearchUrl('上海');
+      assert.ok(url.includes('name=%E4%B8%8A%E6%B5%B7'));
+      assert.ok(url.includes('count=8'));
+      assert.ok(url.includes('format=json'));
+      assert.ok(url.includes('language=zh'));
+    });
+  });
+
   describe('pickWindowEvents(events)', () => {
     it('should select one light and one dark event inside the machine-local window', () => {
       const windowStart = new Date('2026-03-29T00:00:00+08:00');

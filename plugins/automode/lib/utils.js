@@ -37,6 +37,30 @@ function normalizeGeocodeResult(raw) {
   };
 }
 
+function buildInvokeRestJsonCommand(url, timeoutSec) {
+  var safeUrl = String(url || '').replace(/'/g, "''");
+  var script = [
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "$ProgressPreference = 'SilentlyContinue'",
+    'try {',
+    '  Invoke-RestMethod -Uri \'' + safeUrl + '\' -TimeoutSec ' + timeoutSec + ' | ConvertTo-Json -Compress -Depth 8',
+    '} catch {',
+    '  @{ error = $_.Exception.Message } | ConvertTo-Json -Compress -Depth 8',
+    '}'
+  ].join('\n');
+
+  return {
+    file: 'powershell.exe',
+    args: ['-NoProfile', '-Command', script]
+  };
+}
+
+function buildGeocodeSearchUrl(query) {
+  return 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+    encodeURIComponent(String(query || '').trim()) +
+    '&count=8&format=json&language=zh';
+}
+
 function pickWindowEvents(events, windowStart, windowEnd) {
   if (!Array.isArray(events) || !(windowStart instanceof Date) || !(windowEnd instanceof Date)) {
     return null;
@@ -352,5 +376,7 @@ module.exports = {
   validateSunConfig: validateSunConfig,
   normalizeIpLocation: normalizeIpLocation,
   normalizeGeocodeResult: normalizeGeocodeResult,
+  buildInvokeRestJsonCommand: buildInvokeRestJsonCommand,
+  buildGeocodeSearchUrl: buildGeocodeSearchUrl,
   pickWindowEvents: pickWindowEvents
 };

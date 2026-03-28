@@ -2,7 +2,7 @@
  * AutoMode - ZTools 插件预加载脚本
  * 支持定时模式和日出日落模式管理系统深浅色主题切换
  */
-const { execSync } = require('node:child_process');
+const { execSync, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -13,6 +13,8 @@ const {
   validateSunConfig,
   normalizeIpLocation,
   normalizeGeocodeResult,
+  buildInvokeRestJsonCommand,
+  buildGeocodeSearchUrl,
   pickWindowEvents
 } = require('./lib/utils');
 
@@ -106,20 +108,17 @@ function shiftIsoMinutes(isoString, offsetMinutes) {
 }
 
 function invokeRestJson(url, timeoutSec) {
-  const safeUrl = url.replace(/'/g, "''");
-  const psCmd = [
-    'powershell -Command "',
-    'try {',
-    '  Invoke-RestMethod -Uri \'' + safeUrl + '\' -TimeoutSec ' + timeoutSec,
-    '} catch { @{error=$_.Exception.Message} } | ConvertTo-Json -Compress -Depth 8"',
-  ].join('\n');
-
   try {
-    return JSON.parse(execSync(psCmd, {
+    const command = buildInvokeRestJsonCommand(url, timeoutSec);
+    const raw = execFileSync(command.file, command.args, {
       windowsHide: true,
       encoding: 'utf8',
       timeout: Math.max(12000, timeoutSec * 1000 + 4000)
-    }));
+    }).trim();
+    if (!raw) {
+      return { error: 'PowerShell request produced no output' };
+    }
+    return JSON.parse(raw);
   } catch (err) {
     return { error: err.message };
   }
@@ -261,7 +260,7 @@ function searchCities(query) {
     return ok([]);
   }
 
-  const url = GEO_SEARCH_API + '?name=' + encodeURIComponent(trimmed) + '&count=8&format=json';
+  const url = buildGeocodeSearchUrl(trimmed);
   const data = invokeRestJson(url, 10);
   if (data.error) {
     return fail('network_error', data.error);

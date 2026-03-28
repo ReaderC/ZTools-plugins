@@ -307,6 +307,18 @@
           (state.query || '').trim().length >= 2 &&
           !state.loading &&
           !!state.error;
+      },
+      getSearchResultDisplays: function(results) {
+        return Array.isArray(results) ? results.map(function(item) {
+          return {
+            item: item,
+            title: item.name || '未命名地点',
+            meta: [
+              [item.region, item.country].filter(Boolean).join(', '),
+              item.timezone
+            ].filter(Boolean).join(' · ')
+          };
+        }) : [];
       }
     };
     var themeMedia = null;
@@ -660,21 +672,19 @@
         return;
       }
 
-      searchState.results.forEach(function(item) {
+      uiState.getSearchResultDisplays(searchState.results).forEach(function(displayItem) {
+        var item = displayItem.item;
         var button = document.createElement('button');
         button.type = 'button';
         button.className = 'search-item';
 
         var nameEl = document.createElement('div');
         nameEl.className = 'search-item-name';
-        nameEl.textContent = item.name || '未命名地点';
+        nameEl.textContent = displayItem.title;
 
         var metaEl = document.createElement('div');
         metaEl.className = 'search-item-meta';
-        metaEl.textContent = [
-          [item.region, item.country].filter(Boolean).join(', '),
-          item.timezone
-        ].filter(Boolean).join(' · ');
+        metaEl.textContent = displayItem.meta;
 
         button.appendChild(nameEl);
         button.appendChild(metaEl);

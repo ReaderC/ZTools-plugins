@@ -93,4 +93,54 @@ describe('sun search state helpers', () => {
       true
     );
   });
+
+  it('should disambiguate duplicate city names with region in the title', () => {
+    const displays = uiState.getSearchResultDisplays([
+      { name: '上海', region: '上海市', country: '中国', timezone: 'Asia/Shanghai' },
+      { name: '上海', region: '浙江', country: '中国', timezone: 'Asia/Shanghai' },
+      { name: '上海', region: '云南', country: '中国', timezone: 'Asia/Shanghai' }
+    ]);
+
+    assert.deepEqual(
+      displays.map(function(item) {
+        return { title: item.title, meta: item.meta };
+      }),
+      [
+        { title: '上海 · 上海市', meta: '中国 · Asia/Shanghai' },
+        { title: '上海 · 浙江', meta: '中国 · Asia/Shanghai' },
+        { title: '上海 · 云南', meta: '中国 · Asia/Shanghai' }
+      ]
+    );
+  });
+
+  it('should keep unique city names clean and preserve region plus country in meta', () => {
+    const displays = uiState.getSearchResultDisplays([
+      { name: 'London', region: 'England', country: 'United Kingdom', timezone: 'Europe/London' }
+    ]);
+
+    assert.deepEqual(displays, [
+      {
+        item: { name: 'London', region: 'England', country: 'United Kingdom', timezone: 'Europe/London' },
+        title: 'London',
+        meta: 'England, United Kingdom · Europe/London'
+      }
+    ]);
+  });
+
+  it('should fall back to country when duplicate city names have no region', () => {
+    const displays = uiState.getSearchResultDisplays([
+      { name: 'San Jose', region: '', country: 'United States', timezone: 'America/Los_Angeles' },
+      { name: 'San Jose', region: '', country: 'Costa Rica', timezone: 'America/Costa_Rica' }
+    ]);
+
+    assert.deepEqual(
+      displays.map(function(item) {
+        return { title: item.title, meta: item.meta };
+      }),
+      [
+        { title: 'San Jose · United States', meta: 'America/Los_Angeles' },
+        { title: 'San Jose · Costa Rica', meta: 'America/Costa_Rica' }
+      ]
+    );
+  });
 });
