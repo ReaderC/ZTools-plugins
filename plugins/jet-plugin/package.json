@@ -1,6 +1,6 @@
 {
   "name": "jet-plugin",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "A ZTools plugin",
   "author": "zl",
   "main": "index.js",

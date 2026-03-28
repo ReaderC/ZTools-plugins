@@ -41,7 +41,6 @@ class InitService {
       "Aqua"
     ];
     await getInstalledApps().then((appList) => {
-      // console.log(appList)
       appList = appList
         .filter((app) => app.appName)
         .filter(
@@ -110,8 +109,7 @@ class InitService {
         };
         this.channels[appName] = channelInfo;
       }
-      console.debug("channels:");
-      console.debug(this.channels);
+      console.debug("channels:",this.channels);
     });
   }
 
@@ -153,11 +151,10 @@ class InitService {
         isArray: (name) => ["entry", "map"].includes(name)
       });
       const xmlDoc = parser.parse(recentProjectsFileData);
-      let xml_entry = xmlDoc.root.additionalInfo.map.entry;
+      let xml_entry = xmlDoc.application.component.option[0].map[0].entry;
 
       for (let index = 0; index < xml_entry.length; index++) {
         let entry = xml_entry[index];
-        // 属性访问：entry['@_key']，不是 getAttribute('key')
         let entryKey = entry["@_key"];
         let valueNode = entry.value; // 不是 getElementsByTagName("value")[0]
         let recentProjectMetaInfo = valueNode.RecentProjectMetaInfo;
@@ -178,14 +175,13 @@ class InitService {
         }
         // 修改属性：直接赋值，不是 setAttribute
         if (window.ztools.isWindows() && entryKey.startsWith("~")) {
-          entryKey = entryKey.replace("~", window.ztools.getPath("home"));
-          entry["@_key"] = entryKey;
+          entry["@_key"] = entryKey.replace("~", window.ztools.getPath("home"));
         }
         recentProjectList[index] = {
           channel: displayName,
           icon: channel.logo_path,
-          path: entryKey,
-          name: require("path").basename(entryKey),
+          path: entry["@_key"],
+          name: require("path").basename(entry["@_key"]),
           activationTimestamp: activationTimestamp,
           projectOpenTimestamp: projectOpenTimestamp
         };
