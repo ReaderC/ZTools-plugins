@@ -49,7 +49,7 @@
 </template>
 
 <script setup>
-import {onMounted, ref} from 'vue';
+import { onMounted, ref } from 'vue';
 
 const props = defineProps({
   enterAction: Object
@@ -143,8 +143,7 @@ onMounted(() => {
 <style scoped>
 .kill-process {
   padding: 10px;
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
   position: relative;
   background-color: #f5f5f5;
 }
@@ -156,7 +155,7 @@ h2 {
 }
 
 .process-list-container {
-  max-height: 500px;
+  height: calc(100vh - 20px);
   overflow-y: auto;
   border: 1px solid #ddd;
   border-radius: 4px;
