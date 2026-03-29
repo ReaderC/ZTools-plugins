@@ -1,6 +1,6 @@
 :root {
   --bg-app: transparent;
-  --bg-surface: rgba(255, 255, 255, 0.65);
+  --bg-surface: transparent;
   --bg-hover: rgba(245, 245, 245, 0.7);
   --bg-hover-light: rgba(248, 248, 248, 0.5);
   --bg-accent-light: rgba(232, 240, 254, 0.8);
@@ -24,7 +24,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-app: transparent;
-    --bg-surface: rgba(30, 30, 50, 0.65);
+    --bg-surface: transparent;
     --bg-hover: rgba(50, 50, 70, 0.7);
     --bg-hover-light: rgba(40, 40, 60, 0.5);
     --bg-accent-light: rgba(26, 58, 92, 0.8);
