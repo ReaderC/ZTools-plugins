@@ -6,6 +6,7 @@
   "author": "AutoMode",
   "logo": "logo.png",
   "main": "index.html",
+  "platform": ["win32"],
   "preload": "preload.js",
   "features": [
     {

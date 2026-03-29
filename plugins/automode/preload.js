@@ -8,7 +8,8 @@ const path = require('node:path');
 const os = require('node:os');
 const {
   generateTaskXml,
-  generateThemeSwitchScript
+  generateThemeSwitchScript,
+  resolveDesiredTheme
 } = require('./lib/utils');
 
 const SCRIPTS_DIR = path.join(os.homedir(), '.automode-scripts');
@@ -208,6 +209,26 @@ function getSavedConfig() {
   }
 }
 
+function syncThemeOnStartup() {
+  try {
+    const saved = getSavedConfig();
+    if (!saved || !saved.enabled || !saved.config) return;
+
+    const desired = resolveDesiredTheme(saved.config, new Date());
+    const current = getCurrentTheme();
+
+    if (desired === 'light' && current.dark) {
+      switchThemeImmediate('light');
+      console.log('[AutoMode] 启动同步: 当前应为浅色，已切换');
+    } else if (desired === 'dark' && !current.dark) {
+      switchThemeImmediate('dark');
+      console.log('[AutoMode] 启动同步: 当前应为深色，已切换');
+    }
+  } catch (e) {
+    console.error('[AutoMode] 启动同步失败:', e);
+  }
+}
+
 window.themeAPI = {
   enableScheduler: enableScheduler,
   disableScheduler: disableScheduler,
@@ -221,8 +242,10 @@ try {
   window.ztools.onPluginEnter(function() {
     console.log('[AutoMode] 插件已激活');
     ensureScripts();
+    syncThemeOnStartup();
   });
 } catch (e) {
   console.error('[AutoMode] onPluginEnter 初始化失败:', e);
   ensureScripts();
+  syncThemeOnStartup();
 }

@@ -119,7 +119,28 @@ function generateThemeSwitchScript(mode) {
   ].join('\r\n');
 }
 
+/**
+ * 根据当前时间和调度配置判断应处于哪个主题
+ * 时间窗口：[lightTime, darkTime) = light，其余 = dark
+ * @param {{ darkTime: string, lightTime: string }} config - HH:mm 格式
+ * @param {Date} now
+ * @returns {'dark'|'light'}
+ */
+function resolveDesiredTheme(config, now) {
+  var darkParts = config.darkTime.split(':');
+  var lightParts = config.lightTime.split(':');
+  var darkMinutes = parseInt(darkParts[0], 10) * 60 + parseInt(darkParts[1], 10);
+  var lightMinutes = parseInt(lightParts[0], 10) * 60 + parseInt(lightParts[1], 10);
+  var currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  if (lightMinutes <= currentMinutes && currentMinutes < darkMinutes) {
+    return 'light';
+  }
+  return 'dark';
+}
+
 module.exports = {
   generateTaskXml: generateTaskXml,
-  generateThemeSwitchScript: generateThemeSwitchScript
+  generateThemeSwitchScript: generateThemeSwitchScript,
+  resolveDesiredTheme: resolveDesiredTheme
 };
