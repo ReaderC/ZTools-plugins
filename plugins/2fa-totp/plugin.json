@@ -1,0 +1,31 @@
+{
+  "name": "2fa-totp",
+  "title": "2FA 动态验证码",
+  "description": "2FA TOTP 插件：提供安全、便捷的双重认证验证码管理功能，支持置顶、排序与实时预览。",
+  "author": "狄硕",
+  "homepage": "https://github.com/dishuo183/ZTools-plugins",
+  "version": "1.0.0",
+  "main": "index.html",
+  "preload": "preload.js",
+  "logo": "logo.png",
+  "platform": [
+    "win32",
+    "darwin",
+    "linux"
+  ],
+  "ai": true,
+  "features": [
+    {
+      "code": "2fa-totp",
+      "explain": "管理和查看您的 2FA TOTP 动态验证码",
+      "cmds": [
+        "2fa",
+        "totp",
+        "otp",
+        "验证码",
+        "动态验证码",
+        "2fa-totp"
+      ]
+    }
+  ]
+}
