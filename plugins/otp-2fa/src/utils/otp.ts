@@ -14,9 +14,7 @@ export function base32ToBuf(base32: string): Uint8Array {
     const buf = new Uint8Array(((len * 5) / 8) | 0);
     let v = 0, bits = 0, idx = 0;
     for (let i = 0; i < len; i++) {
-        const val = BASE32_CHARS.indexOf(base32[i]);
-        if (val === -1) continue;
-        v = (v << 5) | val;
+        v = (v << 5) | BASE32_CHARS.indexOf(base32[i]);
         bits += 5;
         if (bits >= 8) {
             buf[idx++] = (v >> (bits - 8)) & 0xff;

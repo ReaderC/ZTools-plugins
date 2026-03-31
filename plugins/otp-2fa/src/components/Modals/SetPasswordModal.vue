@@ -30,7 +30,6 @@ const emits = defineEmits([
               @input="emits('update:passwordInput', ($event.target as HTMLInputElement).value)"
               placeholder="请输入至少 4 位密码" 
               @keyup.enter="emits('submit')"
-              spellcheck="false"
             >
           </div>
           <div class="form-item full-width">
@@ -41,7 +40,6 @@ const emits = defineEmits([
               @input="emits('update:confirmPasswordInput', ($event.target as HTMLInputElement).value)"
               placeholder="请再次输入密码" 
               @keyup.enter="emits('submit')"
-              spellcheck="false"
             >
           </div>
         </div>

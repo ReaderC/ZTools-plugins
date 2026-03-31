@@ -1,22 +1,15 @@
 <script setup lang="ts">
-import { PINYIN_SCHEMES } from '../../utils/pinyin'
-
 const props = defineProps<{
   show: boolean,
   config: any,
   showSelectMenu: boolean,
-  showNextSelectMenu: boolean,
-  showPinyinSelectMenu: boolean
+  showNextSelectMenu: boolean
 }>()
 
 const emits = defineEmits([
-  'update:show', 'update:showSelectMenu', 'update:showNextSelectMenu',
-  'update:showPinyinSelectMenu',
-  'save-config', 'reset-database', 'export-data', 'import-data', 'change-password'
+  'update:show', 'update:showSelectMenu', 'update:showNextSelectMenu', 
+  'save-config', 'reset-database'
 ])
-
-const currentPinyinLabel = () =>
-  PINYIN_SCHEMES.find(s => s.value === props.config.pinyinScheme)?.label ?? '全拼'
 </script>
 
 <template>
@@ -85,37 +78,7 @@ const currentPinyinLabel = () =>
         </div>
 
         <div class="settings-item">
-          <span class="settings-label">搜索拼音方案</span>
-          <div class="settings-select" :class="{ open: showPinyinSelectMenu }"
-            @click.stop="emits('update:showPinyinSelectMenu', !showPinyinSelectMenu)">
-            <span>{{ currentPinyinLabel() }}</span>
-            <svg class="arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-            <div class="select-menu up" v-if="showPinyinSelectMenu">
-              <div v-for="scheme in PINYIN_SCHEMES" :key="scheme.value"
-                class="select-item" :class="{ active: config.pinyinScheme === scheme.value }"
-                @click.stop="config.pinyinScheme = scheme.value; emits('save-config'); emits('update:showPinyinSelectMenu', false)">
-                <span>{{ scheme.label }}</span>
-                <svg v-if="config.pinyinScheme === scheme.value" width="12" height="12" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-item btn-grid">
-          <button class="btn setting-btn-align" @click="emits('export-data')">导出数据</button>
-          <span></span>
-          <button class="btn setting-btn-align btn-change-pwd" @click="emits('change-password')">修改主密码</button>
-        </div>
-
-        <div class="settings-item btn-grid">
-          <button class="btn setting-btn-align" @click="emits('import-data')">导入数据</button>
-          <span></span>
+          <span class="settings-label">数据管理</span>
           <button class="btn btn-danger setting-btn-align" @click="emits('reset-database')">重置数据</button>
         </div>
 
@@ -126,22 +89,3 @@ const currentPinyinLabel = () =>
     </div>
   </transition>
 </template>
-
-<style scoped>
-.btn-grid {
-  display: grid;
-  grid-template-columns: 120px 1fr 120px;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.btn-change-pwd {
-  background: #7c3aed;
-  color: #ffffff !important;
-  border: none;
-}
-
-.btn-change-pwd:hover {
-  background: #6d28d9;
-}
-</style>

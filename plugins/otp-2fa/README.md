@@ -1,97 +1,55 @@
-# 2FA动态验证码
+# otp-2fa
 
-这是一个为 ZTools 平台开发的2FA动态验证码插件，提供安全、简约且高效的 2FA令牌管理器，支持 TOTP/HOTP/Steam 多种协议。
+> 专业的 2FA 验证码管理工具，支持 TOTP/HOTP/Steam 协议，具备实时预览、自动排序及置顶功能。
 
-本项目**全部代码均由人工智能（AI）生成**。项目作者不具备相关编程能力，无法对代码内容提供技术解释，亦不作任何功能或稳定性保证。如遇问题或有改进建议，欢迎自行修改、Fork 或提交 Issue。
+这是一个使用 **Vue 3 + Vite + TypeScript** 构建的 ZTools 插件。
 
-## 截图
+## ✨ 功能特性
 
-![2FA动态验证码界面1](screenshot.png)
+### 📌 已包含的示例功能
 
-## 核心特性
+- **Hello** - 基础功能指令示例
+  - 触发指令：`你好` / `hello`
+  - 展示简单的 Vue 组件界面
 
-### 1. 安全存储
+- **读文件** - 文件读取功能示例
+  - 功能指令：`读文件`
+  - 匹配指令：支持拖拽文件触发
+  - 演示如何使用 Node.js 能力读取文件内容
 
-- **密钥保护**：采用加密逻辑保护本地存储数据。
-- **硬件绑定**：支持设备指纹实现开启即自动解锁。
-- **隐私验证**：查看密钥原文需经过身份验证。
+- **保存为文件** - 文件写入功能示例
+  - 匹配指令：任意文本/图片 → `保存为文件`
+  - 演示如何将剪贴板内容保存为文件
 
-### 2. 全协议支持
+## 📁 项目结构
 
-- **多种协议**：支持 TOTP、HOTP 以及 Steam 令牌。
-- **灵活配置**：支持多种哈希算法及自定义验证码位数。
-
-### 3. 先进交互
-
-- **实时预览**：支持在主界面同步预览下一周期的验证码。
-- **智能填充**：根据协议自动匹配算法规范。
-- **视觉切换**：支持环形与条形两种指示器模式。
-
-### 4. 便捷管理
-
-- **灵活排序**：支持账号一键置顶及拖拽排序。
-- **极速复制**：支持点击快捷复制并提供动态反馈。
-- **数据重置**：支持一键清空所有数据。
-
-### 5. 搜索与快速定位
-
-- **拼音搜索**：支持通过汉字、全拼、首字母快速筛选账号卡片。
-- **双拼支持**：可在设置中切换自然码、小鹤、拼音加加、微软、搜狗等主流双拼方案。
-- **平滑动画**：搜索过滤与恢复均带有流畅的卡片过渡动画。
-
-### 6. 数据备份与迁移
-
-- **加密导出**：账户数据加密后复制到剪贴板，用于备份与跨设备迁移。
-- **端到端加密**：数据导出时加密，自动使用当前主密码解密。
-- **安全导入**：支持的数据一键导入，成功后自动覆盖本地数据并设定新主密码。
-- **修改主密码**：支持修改主密码，修改后所有账户密钥同步重新加密。
-
-## 使用说明
-
-### 基本操作
-
-- **快速填入**：点击账号卡片，自动复制并模拟输入对应验证码
-- **仅复制验证码**：Shift + 左键点击卡片，仅复制不自动输入
-- **拖动排序**：长按卡片即可自由拖动调整账号顺序
-- **置顶账号**：右键卡片可置顶当前账号，置顶账号不支持拖动
-- **进度条样式**：可在设置中切换「条形 / 环形」展示
-- **下一码预览**：可在设置中开启，提前显示下一轮验证码
-- **拼音搜索**：在顶部搜索框输入汉字、全拼或首字母快速定位账号
-
-## 项目结构
-
-```text
+```
 .
 ├── public/
-│   ├── logo.png                         # 插件图标
-│   ├── plugin.json                      # 插件配置文件
-│   └── services.js                      # Preload 脚本
+│   ├── logo.png              # 插件图标
+│   ├── plugin.json           # 插件配置文件
+│   └── preload/              # Preload 脚本目录
+│       ├── package.json      # Preload 依赖配置
+│       └── services.js       # Node.js 能力扩展
 ├── src/
-│   ├── components/                      # UI 组件库
-│   │   ├── Modals/                      # 模态框组件
-│   │   │   ├── ChangePasswordModal.vue  # 修改主密码弹窗
-│   │   │   ├── ImportDataModal.vue      # 导入数据弹窗
-│   │   │   └── ...                      # 其他模态框组件
-│   │   └── AccountCard.vue              # 账号条目核心组件
-│   ├── composables/                     # 逻辑层
-│   │   ├── useAccounts.ts               # 账户增删改查与解密
-│   │   ├── useAuth.ts                   # 身份验证、密钥派生及主密码修改
-│   │   ├── useDataManagement.ts         # 数据导出与导入
-│   │   └── useTicker.ts                 # 高精度计时器与令牌更新
-│   ├── utils/                           # 工具函数
-│   │   ├── crypto.ts                    # 加密与安全存储集成
-│   │   ├── otp.ts                       # OTP 核心算法实现
-│   │   └── pinyin.ts                    # 拼音搜索与双拼转换
-│   ├── App.vue                          # 插件主入口
-│   ├── constants.ts                     # 全局常量定义
-│   ├── main.css                         # 全局样式系统
-│   └── main.ts                          # 项目启动引导
-├── README.md                            # 项目说明文档
-├── vite.config.js                       # Vite 构建配置
-└── tsconfig.json                        # TypeScript 类型配置
+│   ├── main.ts               # 入口文件
+│   ├── main.css              # 全局样式
+│   ├── App.vue               # 根组件
+│   ├── env.d.ts              # 类型声明
+│   ├── Hello/                # Hello 功能组件
+│   │   └── index.vue
+│   ├── Read/                 # 读文件功能组件
+│   │   └── index.vue
+│   └── Write/                # 写文件功能组件
+│       └── index.vue
+├── index.html                # HTML 模板
+├── vite.config.js            # Vite 配置
+├── tsconfig.json             # TypeScript 配置
+├── package.json              # 项目依赖
+└── README.md                 # 项目文档
 ```
 
-## 快速开发
+## 🚀 快速开始
 
 ### 安装依赖
 
@@ -105,61 +63,219 @@ npm install
 npm run dev
 ```
 
-### 构建打包
+开发服务器将在 `http://localhost:5173` 启动。ZTools 会自动加载开发版本。
+
+### 构建生产版本
 
 ```bash
 npm run build
 ```
 
-## 更新日志
+构建产物将输出到 `dist/` 目录。
 
-### v1.2.0
+## 📖 开发指南
 
-- **拼音搜索**：新增账号搜索功能，支持汉字、全拼、双拼及首字母匹配。
-- **双拼方案**：新增双拼搜索方案配置，支持自然码、小鹤、拼音加加、微软、搜狗五种方案，可在设置中切换。
-- **启动命令**：新增全拼及小鹤双拼的启动命令，可快速唤起插件。
+### 1. 修改插件配置
 
-### v1.1.2
+编辑 `public/plugin.json` 文件：
 
-- **内存优化**：退出插件后 3 分钟内未重新打开，自动结束进程释放内存。
-- **样式修复**：修复导入数据弹窗取消按钮背景色与其他弹窗不一致的问题。
-- **体验优化**：所有输入框禁用拼写检查，消除文字下方红色波浪线。
+```json
+{
+  "name": "你的插件名称",
+  "description": "插件描述",
+  "author": "作者名称",
+  "version": "1.0.0",
+  "features": [
+    // 添加你的功能配置
+  ]
+}
+```
 
-### v1.1.1
+### 2. 创建新功能
 
-- **数据导出**：新增数据导出功能，加密数据后写入剪贴板。
-- **数据导入**：新增数据导入功能，密码验证通过后自动覆盖本地数据并更新主密码。
-- **修改主密码**：新增修改主密码功能，修改后所有账户密钥同步重新加密。
+#### 步骤 1: 创建 Vue 组件
 
-### v1.1.0
+在 `src/` 目录下创建新的功能组件：
 
-- **鲁棒性修复**：修复了 Base32 非法字符导致的计算漏洞及重置状态清理不彻底问题。
-- **代码清理**：移除了项目目录下冗余的演示模板文件夹，显著精简项目体积。
-- **类型优化**：消除了 `crypto.subtle` 调用中的冗余类型断言，提升代码规范性。
+```vue
+<!-- src/MyFeature/index.vue -->
+<template>
+  <div class="my-feature">
+    <h1>{{ title }}</h1>
+    <!-- 你的组件内容 -->
+  </div>
+</template>
 
-### v1.0.4
+<script setup lang="ts">
+import { ref } from 'vue'
 
-- **文档规范化**：精简了插件元数据描述，并规范化了 README 说明文档。
+const title = ref('我的新功能')
+</script>
 
-### v1.0.3
+<style scoped>
+.my-feature {
+  padding: 20px;
+}
+</style>
+```
 
-- **功能补全**：修复了查看密钥的身份验证逻辑漏洞，解决了弹窗层级叠加遮挡问题。
+#### 步骤 2: 注册路由
 
-### v1.0.2
+在 `src/App.vue` 中添加路由：
 
-- **视觉还原**：基于原始备份 `dist/App.vue` 实现了 100% 的 UI 文本与样式还原。
+```vue
+<script setup lang="ts">
+import MyFeature from './MyFeature/index.vue'
 
-### v1.0.1
+const routes = {
+  hello: Hello,
+  read: Read,
+  write: Write,
+  myfeature: MyFeature // 添加新路由
+}
+</script>
+```
 
-- **架构重构**：完成从单体架构向 Composables + Components 模块化架构的全面迁移。
+#### 步骤 3: 配置功能
+
+在 `plugin.json` 中添加功能配置：
+
+```json
+{
+  "code": "myfeature",
+  "explain": "我的新功能",
+  "icon": "logo.png",
+  "cmds": ["触发指令"]
+}
+```
+
+### 3. 使用 Node.js 能力
+
+#### 扩展 Preload 服务
+
+编辑 `public/preload/services.js`：
+
+```javascript
+const fs = require('fs')
+const path = require('path')
+
+module.exports = {
+  // 示例：读取文件
+  readFile: (filePath) => {
+    return fs.readFileSync(filePath, 'utf-8')
+  },
+
+  // 添加你的服务
+  myService: (params) => {
+    // 实现你的逻辑
+    return result
+  }
+}
+```
+
+#### 在 Vue 组件中调用
+
+```vue
+<script setup lang="ts">
+const handleRead = async () => {
+  try {
+    const content = await window.services.readFile('/path/to/file')
+    console.log(content)
+  } catch (error) {
+    console.error('读取失败:', error)
+  }
+}
+</script>
+```
+
+### 4. 使用 ZTools API
+
+```vue
+<script setup lang="ts">
+// 获取剪贴板内容
+const text = await window.ztools.getClipboardContent()
+
+// 隐藏主窗口
+window.ztools.hideMainWindow()
+
+// 显示提示
+window.ztools.showTip('操作成功')
+
+// 更多 API 请参考官方文档
+</script>
+```
+
+## 🎨 样式开发
+
+### 使用 CSS 变量
+
+ZTools 提供了一套 CSS 变量用于主题适配：
+
+```css
+.my-component {
+  background: var(--bg-color);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+```
+
+### 暗色模式支持
+
+```css
+@media (prefers-color-scheme: dark) {
+  .my-component {
+    /* 暗色模式样式 */
+  }
+}
+```
+
+## 📦 构建与发布
+
+### 1. 构建插件
+
+```bash
+npm run build
+```
+
+### 2. 测试构建产物
+
+将 `dist/` 目录中的所有文件复制到 ZTools 插件目录进行测试。
+
+### 3. 发布到插件市场
+
+1. 确保 `plugin.json` 中的信息完整准确
+2. 准备好插件截图和详细说明
+3. 访问 ZTools 插件市场提交插件
+
+## 📚 相关资源
+
+- [ZTools 官方文档](https://github.com/ztool-center/ztools)
+- [ZTools API 文档](https://github.com/ztool-center/ztools-api-types)
+- [Vue 3 文档](https://vuejs.org/)
+- [Vite 文档](https://vitejs.dev/)
+
+## ❓ 常见问题
+
+### Q: 如何调试插件？
+
+A: 使用 `npm run dev` 启动开发服务器，在插件界面中点击插件头像图标，在弹出的菜单中选择"打开开发者工具"进行调试。
+
+### Q: 如何访问 Node.js 能力？
+
+A: 通过 `public/preload/services.js` 文件扩展服务，然后在组件中使用 `window.services` 调用。
+
+### Q: 插件图标不显示？
+
+A: 确保 `public/logo.png` 文件存在，且在 `plugin.json` 中正确配置了 `logo` 字段。
+
+### Q: 如何处理大文件上传？
+
+A: 建议使用 Node.js 流式处理，在 preload 脚本中实现文件分块处理逻辑。
+
+## 📄 开源协议
+
+MIT License
 
 ---
 
-## 致谢
-
-- 插件基于 ZTools 插件框架开发
-- 插件图标使用 [AppIcon Forge](https://github.com/zhangyu1818/appicon-forge) 制作
-
-## 重要声明
-
-本项目基于 **MIT License** 协议开源，仅供个人学习和研究使用。
+**祝你开发愉快！** 🎉
