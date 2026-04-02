@@ -1,10 +1,10 @@
 {
   "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
-  "name": "起个变量名",
+  "name": "variable-name",
   "title": "起个变量名",
   "description": "使用百度翻译起变量名称",
   "author": "jeffrey",
-  "version": "1.0.0",
+  "version": "1.0.01",
   "main": "index.html",
   "preload": "preload/services.js",
   "logo": "logo.png",
