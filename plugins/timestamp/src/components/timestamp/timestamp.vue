@@ -1,9 +1,68 @@
 <script lang="ts" setup>
-defineProps({
+import { ref, computed } from 'vue'
+
+const props = defineProps({
   launchParam: {
     type: Object,
     required: true,
   },
+})
+
+// 格式化日期为 YYYY-MM-DD HH:mm:ss
+const formatDateTime = (date: Date) => {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+const inputValue = ref(props.launchParam.payload || new Date().getTime().toString())
+
+// 解析输入为 Date 对象
+const parsedDate = computed(() => {
+  if (!inputValue.value) return null
+  const trimmed = inputValue.value.trim()
+  // 如果是纯数字，视为毫秒时间戳
+  if (/^\d+$/.test(trimmed)) {
+    const num = Number(trimmed)
+    return new Date(num < 1e12 ? num * 1000 : num)
+  }
+  // 尝试解析为日期字符串
+  const date = new Date(trimmed)
+  return isNaN(date.getTime()) ? null : date
+})
+
+// 格式化本地时间
+const localTimeFull = computed(() => {
+  if (!parsedDate.value) return '-'
+  return formatDateTime(parsedDate.value)
+})
+
+// 格式化本地日期
+const localTimeDate = computed(() => {
+  if (!parsedDate.value) return '-'
+  return parsedDate.value.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+  })
+})
+
+// 时间戳(秒)
+const timestampSeconds = computed(() => {
+  if (!parsedDate.value) return '-'
+  return String(Math.floor(parsedDate.value.getTime() / 1000))
+})
+
+// 时间戳(毫秒)
+const timestampMilliseconds = computed(() => {
+  if (!parsedDate.value) return '-'
+  return String(parsedDate.value.getTime())
+})
+
+// UTC 时间
+const utcTime = computed(() => {
+  if (!parsedDate.value) return '-'
+  return formatDateTime(parsedDate.value) + ' UTC'
 })
 </script>
 
@@ -13,11 +72,10 @@ defineProps({
       <!-- Header -->
       <div class="p-4 border-b bg-gray-50">
         <input
-          id="timestamp-input"
           type="text"
           class="w-full px-3 py-2 text-xl font-medium text-gray-800 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="请输入时间戳或时间..."
-          :value="launchParam.payload"
+          v-model="inputValue"
         />
       </div>
 
@@ -26,13 +84,12 @@ defineProps({
         <!-- Local time with dynamic timezone -->
         <div class="flex items-center justify-between p-4 hover:bg-gray-50">
           <div class="flex-1">
-            <span class="text-gray-600 text-sm" id="local-timezone-name">本地时间</span>
-            <div class="text-lg font-mono text-gray-900" id="local-time-full">-</div>
+            <span class="text-gray-600 text-sm">本地时间</span>
+            <div class="text-lg font-mono text-gray-900">{{ localTimeFull }}</div>
           </div>
           <button
             class="copy-btn px-3 py-1 text-xs border border-gray-300 rounded hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
-            data-copy=""
-            id="copy-local-full"
+            :data-copy="localTimeFull"
           >
             复制
           </button>
@@ -41,13 +98,12 @@ defineProps({
         <!-- Local time date with dynamic timezone -->
         <div class="flex items-center justify-between p-4 hover:bg-gray-50">
           <div class="flex-1">
-            <span class="text-gray-600 text-sm" id="local-timezone-name-date">本地时间, 日期</span>
-            <div class="text-lg font-mono text-gray-900" id="local-time-date">-</div>
+            <span class="text-gray-600 text-sm">本地时间, 日期</span>
+            <div class="text-lg font-mono text-gray-900">{{ localTimeDate }}</div>
           </div>
           <button
             class="copy-btn px-3 py-1 text-xs border border-gray-300 rounded hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
-            data-copy=""
-            id="copy-local-date"
+            :data-copy="localTimeDate"
           >
             复制
           </button>
@@ -57,12 +113,11 @@ defineProps({
         <div class="flex items-center justify-between p-4 hover:bg-gray-50">
           <div class="flex-1">
             <span class="text-gray-600 text-sm">时间戳(秒)</span>
-            <div class="text-lg font-mono text-gray-900" id="timestamp-seconds">-</div>
+            <div class="text-lg font-mono text-gray-900">{{ timestampSeconds }}</div>
           </div>
           <button
             class="copy-btn px-3 py-1 text-xs border border-gray-300 rounded hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
-            data-copy=""
-            id="copy-timestamp-seconds"
+            :data-copy="timestampSeconds"
           >
             复制
           </button>
@@ -72,12 +127,11 @@ defineProps({
         <div class="flex items-center justify-between p-4 hover:bg-gray-50">
           <div class="flex-1">
             <span class="text-gray-600 text-sm">时间戳(毫秒)</span>
-            <div class="text-lg font-mono text-gray-900" id="timestamp-milliseconds">-</div>
+            <div class="text-lg font-mono text-gray-900">{{ timestampMilliseconds }}</div>
           </div>
           <button
             class="copy-btn px-3 py-1 text-xs border border-gray-300 rounded hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
-            data-copy=""
-            id="copy-timestamp-milliseconds"
+            :data-copy="timestampMilliseconds"
           >
             复制
           </button>
@@ -87,12 +141,11 @@ defineProps({
         <div class="flex items-center justify-between p-4 hover:bg-gray-50">
           <div class="flex-1">
             <span class="text-gray-600 text-sm">标准时间(UTC)</span>
-            <div id="utc-time" class="text-lg font-mono text-gray-900">-</div>
+            <div class="text-lg font-mono text-gray-900">{{ utcTime }}</div>
           </div>
           <button
             class="copy-btn px-3 py-1 text-xs border border-gray-300 rounded hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
-            data-copy=""
-            id="copy-utc-time"
+            :data-copy="utcTime"
           >
             复制
           </button>
@@ -102,7 +155,6 @@ defineProps({
       <!-- Footer -->
       <div class="p-4 border-t bg-gray-50 text-right">
         <button
-          id="other-timezones-btn"
           class="inline-flex items-center text-sm text-gray-600 hover:text-gray-800 cursor-pointer"
         >
           <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,7 +176,7 @@ defineProps({
       </div>
 
       <!-- 其它时区 -->
-      <div id="other-timezones-list" class="hidden border-t">
+      <div class="hidden border-t">
         <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
           <div class="flex-1">
             <span class="text-gray-600 text-sm">UTC-12:00 贝克岛时间(BIT)</span>
