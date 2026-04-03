@@ -1,25 +1,18 @@
 <template>
   <n-drawer
     v-model:show="visible"
-    :width="400"
+    :width="380"
     placement="right"
   >
     <n-drawer-content
       title="设置"
       closable
     >
-      <div class="help-link">
-        <n-gradient-text
-          class="help-link-link"
-          @click="clickOpenPlatform"
-          type="success"
-          >百度翻译开放平台</n-gradient-text
-        >
-      </div>
       <n-form
         :model="formData"
         label-placement="left"
-        label-width="80"
+        label-width="90"
+        label-align="left"
       >
         <n-form-item label="APP ID">
           <n-input
@@ -39,15 +32,22 @@
           />
         </n-form-item>
 
+        <n-form-item label="开放平台">
+          <n-button
+            text
+            type="primary"
+            @click="clickOpenPlatform"
+          >
+            百度翻译开放平台
+          </n-button>
+        </n-form-item>
+
         <n-divider />
 
         <n-form-item label="翻译模式">
-          <n-radio-group
-            size="small"
-            v-model:value="formData.translateMode"
-          >
+          <n-radio-group v-model:value="formData.translateMode">
             <n-radio-button value="realtime">实时翻译</n-radio-button>
-            <n-radio-button value="click">点击/回车翻译</n-radio-button>
+            <n-radio-button value="click">点击翻译</n-radio-button>
           </n-radio-group>
         </n-form-item>
 
@@ -55,13 +55,24 @@
           v-if="formData.translateMode === 'realtime'"
           label="延迟时间"
         >
-          <n-slider
-            v-model:value="formData.delayTime"
-            :min="sliderMin"
-            :max="sliderMax"
-            :markers="sliderMarkers"
-          />
-          <div class="slider-value">{{ formData.delayTime }}ms</div>
+          <div class="delay-row">
+            <n-slider
+              v-model:value="formData.delayTime"
+              :min="sliderMin"
+              :max="sliderMax"
+            />
+            <span class="delay-value">{{ formData.delayTime }}ms</span>
+          </div>
+        </n-form-item>
+
+        <n-divider />
+
+        <n-form-item label="选择后复制">
+          <n-switch v-model:value="formData.copyOnSelect" />
+        </n-form-item>
+
+        <n-form-item label="选择后关闭">
+          <n-switch v-model:value="formData.closeOnSelect" />
         </n-form-item>
       </n-form>
     </n-drawer-content>
@@ -89,6 +100,8 @@ const formData = reactive({
   appKey: '',
   translateMode: 'realtime',
   delayTime: 500,
+  copyOnSelect: true,
+  closeOnSelect: true,
 });
 
 const message = useMessage();
@@ -105,6 +118,8 @@ watch(visible, (val) => {
       formData.appKey = config.appKey;
       formData.translateMode = config.translateMode;
       formData.delayTime = config.delayTime;
+      formData.copyOnSelect = config.copyOnSelect;
+      formData.closeOnSelect = config.closeOnSelect;
     }
   }
 });
@@ -122,32 +137,56 @@ watch(
 );
 
 watch(
-  () => [formData.appId, formData.appKey, formData.translateMode, formData.delayTime],
+  () => [
+    formData.appId,
+    formData.appKey,
+    formData.translateMode,
+    formData.delayTime,
+    formData.copyOnSelect,
+    formData.closeOnSelect,
+  ],
   () => {
     saveConfig({
       appId: formData.appId.trim(),
       appKey: formData.appKey.trim(),
       translateMode: formData.translateMode,
       delayTime: formData.delayTime,
+      copyOnSelect: formData.copyOnSelect,
+      closeOnSelect: formData.closeOnSelect,
     });
   }
 );
 </script>
 
 <style scoped>
-.help-link {
+:deep(.n-form-item) {
   margin-bottom: 16px;
 }
 
-.slider-value {
-  text-align: center;
-  color: #666;
-  font-size: 14px;
-  white-space: nowrap;
-  margin-left: 4px;
+:deep(.n-form-item:last-child) {
+  margin-bottom: 0;
 }
 
-.help-link-link {
-  cursor: pointer;
+:deep(.n-divider) {
+  margin: 8px 0 20px;
+}
+
+.delay-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.delay-row :deep(.n-slider) {
+  flex: 1;
+}
+
+.delay-value {
+  font-size: 13px;
+  color: var(--n-text-color-2);
+  white-space: nowrap;
+  min-width: 50px;
+  text-align: right;
 }
 </style>

@@ -16,6 +16,8 @@ export const sliderMarkers = {
 const defaultConfig = {
   translateMode: 'click',
   delayTime: 500,
+  copyOnSelect: true,
+  closeOnSelect: true,
 };
 
 function normalizeDelayTime(time) {
@@ -30,12 +32,14 @@ function normalizeDelayTime(time) {
 export function getConfig() {
   try {
     const data = window.ztools?.db?.get(STORAGE_KEY);
-    if (data && 'appId' in data && 'appKey' in data) {
+    if (data) {
       return {
-        appId: data.appId,
-        appKey: data.appKey,
+        appId: data.appId || '',
+        appKey: data.appKey || '',
         translateMode: data.translateMode || defaultConfig.translateMode,
         delayTime: normalizeDelayTime(data.delayTime || defaultConfig.delayTime),
+        copyOnSelect: data.copyOnSelect ?? defaultConfig.copyOnSelect,
+        closeOnSelect: data.closeOnSelect ?? defaultConfig.closeOnSelect,
       };
     }
   } catch (e) {
