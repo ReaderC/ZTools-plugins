@@ -7,9 +7,7 @@ const enterAction = ref({});
 const onEnter = ref(null);
 
 onMounted(() => {
-  console.log('进入了 APP-111');
   window.ztools.onPluginEnter((action) => {
-    console.log('进入了 APP-222', action);
     route.value = action.code;
     enterAction.value = action;
     onEnter.value?.();
