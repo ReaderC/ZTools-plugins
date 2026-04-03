@@ -12,6 +12,11 @@
     "main": "http://localhost:5173"
   },
   "features": [
+     {
+      "code": "timestamp",
+      "explain": "时间戳转换",
+      "cmds": ["timestamp", "时间戳转换"]
+    },
     {
       "code": "timestamp",
       "explain": "时间戳转换",
