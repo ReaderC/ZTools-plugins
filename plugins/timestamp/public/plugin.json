@@ -15,7 +15,8 @@
       "code": "timestamp",
       "explain": "时间戳转换",
       "cmds": [
-        ["timestamp", "时间戳转换"],
+        "timestamp",
+        "时间戳转换",
         {
           "type": "regex",
           "label": "时间戳转换",

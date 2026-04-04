@@ -111,6 +111,48 @@ const getTimezoneTime = (offsetMinutes: number) => {
   return `${timezoneDate.getUTCFullYear()}-${pad(timezoneDate.getUTCMonth() + 1)}-${pad(timezoneDate.getUTCDate())} ${pad(timezoneDate.getUTCHours())}:${pad(timezoneDate.getUTCMinutes())}:${pad(timezoneDate.getUTCSeconds())}`
 }
 
+// 时区数组
+const timezones = [
+  { offset: -720, name: 'UTC-12:00 贝克岛时间(BIT)' },
+  { offset: -660, name: 'UTC-11:00 萨摩亚标准时间(SST)、纽埃时间(NUT)' },
+  { offset: -600, name: 'UTC-10:00 夏威夷-阿留申标准时间(HST)、塔希提时间(TAHT)' },
+  { offset: -570, name: 'UTC-9:30 马克萨斯群岛时间(MART)' },
+  { offset: -540, name: 'UTC-9:00 阿拉斯加标准时间(AKST)、甘比尔群岛时间(GIT)' },
+  { offset: -480, name: 'UTC-8:00 太平洋标准时间(PST)' },
+  { offset: -420, name: 'UTC-7:00 山地标准时间(MST)' },
+  { offset: -360, name: 'UTC-6:00 北美中部标准时间(CST)' },
+  { offset: -300, name: 'UTC-5:00 北美东部标准时间(EST)' },
+  { offset: -240, name: 'UTC-4:00 大西洋标准时间(AST)' },
+  { offset: -210, name: 'UTC-3:30 纽芬兰标准时间(NST)' },
+  { offset: -180, name: 'UTC-3:00 阿根廷时间(ART)、巴西利亚时间(BRT)' },
+  { offset: -120, name: 'UTC-2:00 南乔治亚时间(GST)' },
+  { offset: -60, name: 'UTC-1:00 亚速尔时间(AZOT)、佛得角时间(CVT)' },
+  { offset: 0, name: 'UTC±0:00 格林威治标准时间(GMT)、世界标准时间(WET)、祖鲁时间(Z)' },
+  { offset: 60, name: 'UTC+1:00 欧洲中部时间(CET)、西非时间(WAT)' },
+  { offset: 120, name: 'UTC+2:00 欧洲东部时间(EET)、中部非洲时间(CAT)、以色列标准时间(IST)' },
+  { offset: 180, name: 'UTC+3:00 莫斯科时间(MSK)、东非时间(EAT)、阿拉伯标准时间(AST)' },
+  { offset: 210, name: 'UTC+3:30 伊朗标准时间(IRST)' },
+  { offset: 240, name: 'UTC+4:00 海湾标准时间(GST)、萨马拉时间(SAMT)' },
+  { offset: 270, name: 'UTC+4:30 阿富汗时间(AFT)' },
+  { offset: 300, name: 'UTC+5:00 巴基斯坦标准时间(PKT)、叶卡捷琳堡时间(YEKT)' },
+  { offset: 330, name: 'UTC+5:30 印度标准时间(IST)' },
+  { offset: 345, name: 'UTC+5:45 尼泊尔时间(NPT)' },
+  { offset: 360, name: 'UTC+6:00 孟加拉时间(BDT)、不丹时间(BTT)、鄂木斯克时间(OMST)' },
+  { offset: 390, name: 'UTC+6:30 缅甸时间(MMT)、科科斯群岛时间(CCT)' },
+  { offset: 420, name: 'UTC+7:00 中南半岛时间(ICT)、克拉斯诺亚尔斯克时间(KRAT)' },
+  { offset: 480, name: 'UTC+8:00 中国标准时间(CST)、新加坡时间(SGT)、澳大利亚西部标准时间(AWST)、香港时间(HKT)、菲律宾时间(PHT)' },
+  { offset: 525, name: 'UTC+8:45 澳大利亚中西部标准时间(ACWST)' },
+  { offset: 540, name: 'UTC+9:00 日本标准时间(JST)、韩国标准时间(KST)、雅库茨克时间(YAKT)' },
+  { offset: 570, name: 'UTC+9:30 澳大利亚中部标准时间(ACST)' },
+  { offset: 600, name: 'UTC+10:00 澳大利亚东部标准时间(AEST)、符拉迪沃斯托克（海参崴）时间(VLAT)' },
+  { offset: 630, name: 'UTC+10:30 豪勋爵岛标准时间(LHST)' },
+  { offset: 660, name: 'UTC+11:00 所罗门群岛时间(SBT)、马加丹时间(MAGT)' },
+  { offset: 720, name: 'UTC+12:00 新西兰标准时间(NZST)、斐济时间(FJT)、堪察加时间(PETT)' },
+  { offset: 765, name: 'UTC+12:45 查塔姆标准时间(CHAST)' },
+  { offset: 780, name: 'UTC+13:00 汤加时间(TOT)、菲尼克斯群岛时间(PHOT)' },
+  { offset: 840, name: 'UTC+14:00 莱恩群岛时间(LINT)' }
+]
+
 // 快捷键复制
 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
 const modKey = isMac ? 'metaKey' : 'ctrlKey'
@@ -256,239 +298,14 @@ onUnmounted(() => {
 
       <!-- 其它时区 -->
       <div :class="showOtherTimezones ? 'border-t' : 'hidden border-t'">
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
+        <div
+          v-for="tz in timezones"
+          :key="tz.offset"
+          class="flex items-center justify-between p-4 hover:bg-gray-50 border-b"
+        >
           <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-12:00 贝克岛时间(BIT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-720) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-11:00 萨摩亚标准时间(SST)、纽埃时间(NUT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-660) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-10:00 夏威夷-阿留申标准时间(HST)、塔希提时间(TAHT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-600) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-9:30 马克萨斯群岛时间(MART)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-570) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-9:00 阿拉斯加标准时间(AKST)、甘比尔群岛时间(GIT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-540) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-8:00 太平洋标准时间(PST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-480) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-7:00 山地标准时间(MST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-420) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-6:00 北美中部标准时间(CST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-360) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-5:00 北美东部标准时间(EST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-300) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-4:00 大西洋标准时间(AST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-240) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-3:30 纽芬兰标准时间(NST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-210) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-3:00 阿根廷时间(ART)、巴西利亚时间(BRT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-180) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-2:00 南乔治亚时间(GST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-120) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC-1:00 亚速尔时间(AZOT)、佛得角时间(CVT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(-60) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC±0:00 格林威治标准时间(GMT)、世界标准时间(WET)、祖鲁时间(Z)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(0) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+1:00 欧洲中部时间(CET)、西非时间(WAT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(60) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm"
-              >UTC+2:00 欧洲东部时间(EET)、中部非洲时间(CAT)、以色列标准时间(IST)</span
-            >
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(120) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+3:00 莫斯科时间(MSK)、东非时间(EAT)、阿拉伯标准时间(AST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(180) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+3:30 伊朗标准时间(IRST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(210) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+4:00 海湾标准时间(GST)、萨马拉时间(SAMT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(240) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+4:30 阿富汗时间(AFT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(270) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+5:00 巴基斯坦标准时间(PKT)、叶卡捷琳堡时间(YEKT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(300) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+5:30 印度标准时间(IST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(330) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+5:45 尼泊尔时间(NPT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(345) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+6:00 孟加拉时间(BDT)、不丹时间(BTT)、鄂木斯克时间(OMST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(360) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+6:30 缅甸时间(MMT)、科科斯群岛时间(CCT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(390) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+7:00 中南半岛时间(ICT)、克拉斯诺亚尔斯克时间(KRAT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(420) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm"
-              >UTC+8:00
-              中国标准时间(CST)、新加坡时间(SGT)、澳大利亚西部标准时间(AWST)、香港时间(HKT)、菲律宾时间(PHT)</span
-            >
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(480) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+8:45 澳大利亚中西部标准时间(ACWST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(525) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+9:00 日本标准时间(JST)、韩国标准时间(KST)、雅库茨克时间(YAKT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(540) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+9:30 澳大利亚中部标准时间(ACST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(570) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm"
-              >UTC+10:00 澳大利亚东部标准时间(AEST)、符拉迪沃斯托克（海参崴）时间(VLAT)</span
-            >
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(600) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+10:30 豪勋爵岛标准时间(LHST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(630) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+11:00 所罗门群岛时间(SBT)、马加丹时间(MAGT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(660) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+12:00 新西兰标准时间(NZST)、斐济时间(FJT)、堪察加时间(PETT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(720) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+12:45 查塔姆标准时间(CHAST)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(765) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+13:00 汤加时间(TOT)、菲尼克斯群岛时间(PHOT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(780) }}</div>
-          </div>
-        </div>
-        <div class="flex items-center justify-between p-4 hover:bg-gray-50 border-b">
-          <div class="flex-1">
-            <span class="text-gray-600 text-sm">UTC+14:00 莱恩群岛时间(LINT)</span>
-            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(840) }}</div>
+            <span class="text-gray-600 text-sm">{{ tz.name }}</span>
+            <div class="text-lg font-mono text-gray-900">{{ getTimezoneTime(tz.offset) }}</div>
           </div>
         </div>
       </div>
