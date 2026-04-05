@@ -39,12 +39,27 @@ describe('lib/utils.js', () => {
       assert.ok(text.includes('T19:30:00'));
     });
 
-    it('should use current date in StartBoundary (not hardcoded)', () => {
-      const xml = utils.generateTaskXml('dark', '19:00', 'C:\\test');
-      const text = xml.toString('utf16le');
-      const today = new Date().toISOString().split('T')[0];
-      assert.ok(text.includes(today), 'Should use current date, not 2024-01-01');
-      assert.ok(!text.includes('2024-01-01'), 'Should not have hardcoded date');
+    it('should use the local current date in StartBoundary when local date differs from UTC', () => {
+      const RealDate = global.Date;
+      function FakeDate() {
+        return {
+          toISOString: () => '2026-04-04T16:30:00.000Z',
+          getFullYear: () => 2026,
+          getMonth: () => 3,
+          getDate: () => 5
+        };
+      }
+
+      global.Date = FakeDate;
+
+      try {
+        const xml = utils.generateTaskXml('dark', '19:00', 'C:\\test');
+        const text = xml.toString('utf16le');
+        assert.ok(text.includes('2026-04-05T19:00:00'));
+        assert.ok(!text.includes('2026-04-04T19:00:00'));
+      } finally {
+        global.Date = RealDate;
+      }
     });
 
     it('should have StartWhenAvailable=false for theme tasks', () => {
@@ -62,7 +77,7 @@ describe('lib/utils.js', () => {
     it('should pass the wrapped VBS path as the task argument', () => {
       const xml = utils.generateTaskXml('dark', '19:00', 'C:\\test');
       const text = xml.toString('utf16le');
-      assert.ok(text.includes('<Arguments>"C:\\\\test\\\\switch-dark.vbs"</Arguments>'));
+      assert.ok(text.includes('<Arguments>"C:\\test\\switch-dark.vbs"</Arguments>'));
     });
   });
 

@@ -23,8 +23,9 @@ function generateTaskXml(mode, time, scriptsDir) {
   var parts = time.split(':');
   var hour = parts[0];
   var minute = parts[1];
-  var today = new Date().toISOString().split('T')[0];
-  var vbsArgs = '"' + vbsPath.replace(/\\/g, '\\\\') + '"';
+  var now = new Date();
+  var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  var vbsArgs = '"' + vbsPath + '"';
 
   var xml = [
     '<?xml version="1.0" encoding="UTF-16"?>',
@@ -133,7 +134,11 @@ function resolveDesiredTheme(config, now) {
   var lightMinutes = parseInt(lightParts[0], 10) * 60 + parseInt(lightParts[1], 10);
   var currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  if (lightMinutes <= currentMinutes && currentMinutes < darkMinutes) {
+  if (lightMinutes < darkMinutes) {
+    if (currentMinutes >= lightMinutes && currentMinutes < darkMinutes) {
+      return 'light';
+    }
+  } else if (currentMinutes >= lightMinutes || currentMinutes < darkMinutes) {
     return 'light';
   }
   return 'dark';

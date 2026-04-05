@@ -82,4 +82,16 @@ describe('resolveDesiredTheme(config, now)', () => {
     assert.equal(utils.resolveDesiredTheme(customConfig, at21), 'light');
     assert.equal(utils.resolveDesiredTheme(customConfig, at23), 'dark');
   });
+
+  it('should return light late at night when the light window spans midnight', () => {
+    var overnightConfig = { darkTime: '06:00', lightTime: '22:00' };
+    var now = new Date(2026, 2, 29, 23, 0, 0);
+    assert.equal(utils.resolveDesiredTheme(overnightConfig, now), 'light');
+  });
+
+  it('should return light before dawn when the light window spans midnight', () => {
+    var overnightConfig = { darkTime: '06:00', lightTime: '22:00' };
+    var now = new Date(2026, 2, 30, 5, 59, 0);
+    assert.equal(utils.resolveDesiredTheme(overnightConfig, now), 'light');
+  });
 });
