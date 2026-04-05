@@ -1,20 +1,30 @@
 {
+  "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
   "name": "timestamp",
-  "title": "时间戳转换",
-  "description": "时间戳与日期相互转换、多时区支持、实时时间戳显示、自动识别单位",
-  "author": "bugless",
+  "title": "timestamp",
+  "description": "时间戳转换",
+  "author": "loocao",
   "version": "1.0.0",
   "main": "index.html",
   "logo": "logo.png",
   "development": {
-    "main": "http://localhost:5178"
+    "main": "http://localhost:5173"
   },
   "features": [
     {
       "code": "timestamp",
-      "explain": "时间戳与日期互转",
-      "icon": "logo.png",
-      "cmds": ["时间戳", "timestamp", "时间转换", "unix时间", "日期转换", "时间", "日期"]
+      "explain": "时间戳转换",
+      "cmds": [
+        "timestamp",
+        "时间戳转换",
+        {
+          "type": "regex",
+          "label": "时间戳转换",
+          "match": "/(^\\d{5,}$)|(^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?$)/i",
+          "minLength": 5,
+          "maxLength": 25
+        }
+      ]
     }
   ]
 }
