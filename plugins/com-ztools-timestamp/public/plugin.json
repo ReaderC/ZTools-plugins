@@ -1,5 +1,5 @@
 {
-  "name": "timestamp",
+  "name": "com-ztools-timestamp",
   "title": "时间戳转换",
   "description": "时间戳与日期相互转换、多时区支持、实时时间戳显示、自动识别单位",
   "author": "bugless",
@@ -11,10 +11,18 @@
   },
   "features": [
     {
-      "code": "timestamp",
+      "code": "com-ztools-timestamp",
       "explain": "时间戳与日期互转",
       "icon": "logo.png",
-      "cmds": ["时间戳", "timestamp", "时间转换", "unix时间", "日期转换", "时间", "日期"]
+      "cmds": [
+        "时间戳",
+        "timestamp",
+        "时间戳转换",
+        "unix时间",
+        "日期转换",
+        "时间",
+        "日期"
+      ]
     }
   ]
 }
