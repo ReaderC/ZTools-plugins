@@ -3,7 +3,7 @@
   "name": "variable-name",
   "title": "起个变量名",
   "description": "使用百度翻译起变量名称",
-  "author": "jeffrey",
+  "author": "Jeffrey",
   "version": "1.0.06",
   "main": "index.html",
   "preload": "preload/services.js",
