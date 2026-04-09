@@ -7,7 +7,7 @@
   "version": "1.0.0",
   "main": "index.html",
   "preload": "preload/services.js",
-  "logo": "logo.png",
+  "logo": "logo.svg",
   "development": {
     "main": "http://localhost:5173"
   },
@@ -15,7 +15,7 @@
     {
       "code": "api",
       "explain": "API 测试工具，支持请求构建、响应查看、集合管理、环境管理",
-      "icon": "logo.png",
+      "icon": "logo.svg",
       "cmds": ["api test", "send request", "接口测试", "发送请求"]
     }
   ]

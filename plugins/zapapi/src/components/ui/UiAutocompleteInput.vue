@@ -62,9 +62,10 @@ const dropdownRef = ref<HTMLElement | null>(null)
 const showDropdown = ref(false)
 const focusedIndex = ref(0)
 const dropdownStyle = ref<Record<string, string>>({})
+const filterQuery = ref('')
 
 const filteredOptions = computed(() => {
-  const query = props.modelValue.toLowerCase()
+  const query = filterQuery.value.trim().toLowerCase()
   if (!query) return props.options
   return props.options.filter(opt => opt.toLowerCase().includes(query))
 })
@@ -99,6 +100,7 @@ function updateDropdownPosition() {
 
 function onInput(e: Event) {
   const target = e.target as HTMLInputElement
+  filterQuery.value = target.value
   emit('update:modelValue', target.value)
   showDropdown.value = true
   focusedIndex.value = 0
@@ -109,10 +111,13 @@ function onInput(e: Event) {
 
 function onFocus(e: FocusEvent) {
   emit('focus', e)
+  filterQuery.value = ''
   showDropdown.value = true
-  focusedIndex.value = 0
+  const selectedIndex = props.options.findIndex((opt) => opt === props.modelValue)
+  focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
   nextTick(() => {
     updateDropdownPosition()
+    scrollToFocused()
   })
 }
 
@@ -121,12 +126,14 @@ function onBlur(e: FocusEvent) {
   // small delay to allow click on option to fire before closing dropdown
   setTimeout(() => {
     showDropdown.value = false
+    filterQuery.value = ''
   }, 150)
 }
 
 function selectOption(option: string) {
   emit('update:modelValue', option)
   showDropdown.value = false
+  filterQuery.value = ''
   if (inputRef.value) {
     inputRef.value.focus()
   }
@@ -135,8 +142,12 @@ function selectOption(option: string) {
 function onKeydown(e: KeyboardEvent) {
   if (!showDropdown.value) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      filterQuery.value = ''
       showDropdown.value = true
+      const selectedIndex = props.options.findIndex((opt) => opt === props.modelValue)
+      focusedIndex.value = selectedIndex >= 0 ? selectedIndex : 0
       updateDropdownPosition()
+      scrollToFocused()
       e.preventDefault()
     }
     return

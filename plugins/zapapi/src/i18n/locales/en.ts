@@ -283,6 +283,10 @@ export default {
     title: 'Settings',
     theme: 'Theme',
     language: 'Language',
+    accessibility: 'Guidance & Shortcuts',
+    openShortcuts: 'View Shortcuts',
+    replayOnboarding: 'Replay Onboarding',
+    shortcutsEnabled: 'Enable global shortcuts',
     about: 'About',
     techStack: 'Tech Stack',
     systemTheme: 'System',
@@ -294,6 +298,89 @@ export default {
     langZhCN: '简体中文',
     langZhTW: '繁體中文',
     langEn: 'English'
+  },
+
+  shortcuts: {
+    title: 'Keyboard Shortcuts',
+    intro: 'Common actions are available via global shortcuts for faster debugging.',
+    groups: {
+      global: 'Global',
+      tabs: 'Tabs',
+      request: 'Request Actions',
+      layout: 'Layout & Navigation'
+    },
+    items: {
+      openHelp: 'Open shortcuts help',
+      openSettings: 'Open settings',
+      replayGuide: 'Replay onboarding',
+      newTab: 'Open a new tab',
+      closeTab: 'Close current tab',
+      duplicateTab: 'Duplicate current tab',
+      nextTab: 'Switch to next tab',
+      prevTab: 'Switch to previous tab',
+      sendRequest: 'Send request / connect socket',
+      saveRequest: 'Save current request',
+      cancelRequest: 'Cancel current send',
+      toggleSidebar: 'Toggle sidebar',
+      focusUrl: 'Focus URL input',
+      toggleResponse: 'Toggle response panel'
+    },
+    keys: {
+      help: '?',
+      openSettings: 'Ctrl/Cmd + ,',
+      replayGuide: 'Ctrl/Cmd + Shift + H',
+      newTab: 'Ctrl/Cmd + Alt + T',
+      closeTab: 'Ctrl/Cmd + Alt + W',
+      duplicateTab: 'Ctrl/Cmd + D',
+      nextTab: 'Ctrl/Cmd + Shift + ]',
+      prevTab: 'Ctrl/Cmd + Shift + [',
+      sendRequest: 'Ctrl/Cmd + Enter',
+      saveRequest: 'Ctrl/Cmd + S',
+      cancelRequest: 'Esc',
+      toggleSidebar: 'Ctrl/Cmd + B',
+      focusUrl: 'Ctrl/Cmd + K',
+      toggleResponse: 'Ctrl/Cmd + Shift + R'
+    }
+  },
+
+  onboarding: {
+    next: 'Next',
+    prev: 'Previous',
+    done: 'Done',
+    steps: {
+      env: {
+        title: 'Environment Switching',
+        desc: 'Choose the active environment here. Variables are injected automatically into requests.'
+      },
+      sidebar: {
+        title: 'Collections & History',
+        desc: 'Manage collections, requests, and history. Double-click a request to open it in a new tab.'
+      },
+      tabs: {
+        title: 'Multi-tab Workflow',
+        desc: 'Each tab has independent request state, ideal for parallel endpoint debugging.'
+      },
+      url: {
+        title: 'Request URL',
+        desc: 'Enter a URL with variable interpolation support. Press Ctrl/Cmd + Enter to send quickly.'
+      },
+      send: {
+        title: 'Send Request',
+        desc: 'Use Send to execute HTTP requests. In Socket mode, this button connects/disconnects.'
+      },
+      save: {
+        title: 'Save Request',
+        desc: 'Save the current request into a collection for reuse and team collaboration.'
+      },
+      response: {
+        title: 'Response Panel',
+        desc: 'Inspect status, headers, and body with search, filtering, and copy actions.'
+      },
+      shortcuts: {
+        title: 'Shortcuts Entry',
+        desc: 'Click here anytime to view all shortcuts. You can also press ? to open it instantly.'
+      }
+    }
   },
 
   tech: {

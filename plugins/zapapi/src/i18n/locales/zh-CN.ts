@@ -283,6 +283,10 @@ export default {
     title: '设置',
     theme: '主题模式',
     language: '语言',
+    accessibility: '引导与快捷键',
+    openShortcuts: '查看快捷键',
+    replayOnboarding: '重新播放新手引导',
+    shortcutsEnabled: '启用全局快捷键',
     about: '关于项目',
     techStack: '技术栈',
     systemTheme: '跟随系统',
@@ -294,6 +298,89 @@ export default {
     langZhCN: '简体中文',
     langZhTW: '繁體中文',
     langEn: 'English'
+  },
+
+  shortcuts: {
+    title: '快捷键',
+    intro: '常用操作支持全局快捷键，可显著提升调试效率。',
+    groups: {
+      global: '全局',
+      tabs: '标签页',
+      request: '请求操作',
+      layout: '布局与导航'
+    },
+    items: {
+      openHelp: '打开快捷键帮助',
+      openSettings: '打开设置',
+      replayGuide: '重新播放新手引导',
+      newTab: '新建标签页',
+      closeTab: '关闭当前标签页',
+      duplicateTab: '复制当前标签页',
+      nextTab: '切换到下一个标签页',
+      prevTab: '切换到上一个标签页',
+      sendRequest: '发送请求 / 连接 Socket',
+      saveRequest: '保存当前请求',
+      cancelRequest: '取消当前发送',
+      toggleSidebar: '折叠/展开侧边栏',
+      focusUrl: '聚焦 URL 输入框',
+      toggleResponse: '折叠/展开响应面板'
+    },
+    keys: {
+      help: '?',
+      openSettings: 'Ctrl/Cmd + ,',
+      replayGuide: 'Ctrl/Cmd + Shift + H',
+      newTab: 'Ctrl/Cmd + Alt + T',
+      closeTab: 'Ctrl/Cmd + Alt + W',
+      duplicateTab: 'Ctrl/Cmd + D',
+      nextTab: 'Ctrl/Cmd + Shift + ]',
+      prevTab: 'Ctrl/Cmd + Shift + [',
+      sendRequest: 'Ctrl/Cmd + Enter',
+      saveRequest: 'Ctrl/Cmd + S',
+      cancelRequest: 'Esc',
+      toggleSidebar: 'Ctrl/Cmd + B',
+      focusUrl: 'Ctrl/Cmd + K',
+      toggleResponse: 'Ctrl/Cmd + Shift + R'
+    }
+  },
+
+  onboarding: {
+    next: '下一步',
+    prev: '上一步',
+    done: '完成',
+    steps: {
+      env: {
+        title: '环境切换',
+        desc: '在这里选择当前激活环境，变量会自动注入请求。'
+      },
+      sidebar: {
+        title: '集合与历史',
+        desc: '左侧可以管理集合、请求和历史记录，双击请求可在新标签页打开。'
+      },
+      tabs: {
+        title: '多标签调试',
+        desc: '每个标签页都有独立请求状态，适合并行调试多个接口。'
+      },
+      url: {
+        title: '请求地址',
+        desc: '输入 URL，支持变量插值。按 Ctrl/Cmd + Enter 可快速发送。'
+      },
+      send: {
+        title: '发送请求',
+        desc: '点击发送按钮发起请求；Socket 模式下该按钮用于连接/断开。'
+      },
+      save: {
+        title: '保存请求',
+        desc: '把当前请求保存到集合，便于复用和团队协作。'
+      },
+      response: {
+        title: '响应面板',
+        desc: '查看状态码、响应头与响应体，支持搜索、过滤和复制。'
+      },
+      shortcuts: {
+        title: '快捷键入口',
+        desc: '点击这里随时查看完整快捷键清单。输入 ? 也可以快速打开。'
+      }
+    }
   },
 
   tech: {

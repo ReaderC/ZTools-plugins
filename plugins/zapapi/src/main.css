@@ -310,3 +310,50 @@ pre,
     background-color: #777777;
   }
 }
+
+.driver-popover {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.driver-popover-title {
+  color: var(--text-primary) !important;
+  font-size: 13px !important;
+}
+
+.driver-popover-description {
+  color: var(--text-secondary) !important;
+  font-size: 12px !important;
+}
+
+.driver-popover-progress-text {
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+.driver-popover-footer button {
+  border-radius: var(--radius-sm) !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+.driver-popover-footer .driver-popover-next-btn,
+.driver-popover-footer .driver-popover-done-btn {
+  background: var(--accent-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.driver-popover-arrow {
+  border-color: var(--border-color) !important;
+}
+
+.driver-highlighted-element {
+  outline: 2px solid color-mix(in srgb, var(--accent-primary) 72%, white) !important;
+}

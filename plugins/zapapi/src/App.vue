@@ -7,7 +7,7 @@
         </svg>
         <span>ZapApi</span>
       </div>
-      <div class="zapapi-env-selector">
+      <div class="zapapi-env-selector" data-tour-id="env-selector">
         <span class="zapapi-env-label">{{ t('app.env') }}</span>
         <UiSelect
           v-model="activeEnvId"
@@ -29,8 +29,13 @@
           </svg>
           {{ t('app.code') }}
         </UiButton>
+        <UiTooltip :content="t('shortcuts.title')" placement="bottom">
+          <UiButton data-tour-id="shortcuts-entry" variant="ghost" size="sm" icon-only @click="showShortcuts = true">
+            ?
+          </UiButton>
+        </UiTooltip>
         <UiTooltip :content="t('common.settings')" placement="bottom">
-          <UiButton variant="ghost" size="sm" icon-only @click="showSettings = true">
+          <UiButton data-tour-id="settings-entry" variant="ghost" size="sm" icon-only @click="showSettings = true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/>
               <circle cx="12" cy="12" r="3"/>
@@ -54,6 +59,7 @@
       />
       <div class="zapapi-main">
         <RequestTabs
+          data-tour-id="tabs-root"
           :tabs="tabItems"
           :active-tab-id="activeTabId"
           @select="switchTab"
@@ -66,6 +72,7 @@
         />
         <div class="workspace-region">
           <RequestBuilder
+            ref="requestBuilderRef"
             :request="activeTab.request"
             :response="activeTab.response"
             :sending="activeTab.sending"
@@ -119,13 +126,19 @@
       @confirm="confirmPendingTabClose"
       @cancel="pendingTabClose = null"
     />
-    <SettingsModal v-if="showSettings" @close="showSettings = false" />
+    <SettingsModal
+      v-if="showSettings"
+      @close="showSettings = false"
+      @open-shortcuts="showShortcuts = true"
+      @replay-onboarding="replayOnboarding"
+    />
+    <ShortcutsModal v-if="showShortcuts" @close="showShortcuts = false" />
     <UiToast ref="toastRef" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sidebar from './components/Sidebar.vue'
 import RequestBuilder from './components/RequestBuilder.vue'
@@ -135,6 +148,7 @@ import EnvironmentManager from './components/EnvironmentManager.vue'
 import CodeGenerator from './components/CodeGenerator.vue'
 import CollectionManager from './components/CollectionManager.vue'
 import SettingsModal from './components/SettingsModal.vue'
+import ShortcutsModal from './components/ShortcutsModal.vue'
 import UiSelect from './components/ui/UiSelect.vue'
 import UiButton from './components/ui/UiButton.vue'
 import UiModal from './components/ui/UiModal.vue'
@@ -145,6 +159,9 @@ import type { RequestState, ResponseState } from './store/request'
 import { useEnvironmentStore } from './store/environments'
 import { useCollectionsStore } from './store/collections'
 import { useHistoryStore, type HistoryItem } from './store/history'
+import { useSettingsStore } from './store/settings'
+import { useShortcuts } from './composables/useShortcuts'
+import { useOnboarding } from './composables/useOnboarding'
 import { createRequestController, type SendController } from './utils/requestExecutor'
 import { connectSocket, getSocketController } from './utils/socketExecutor'
 import { normalizeHttpUrl } from './utils/urlNormalizer'
@@ -154,12 +171,15 @@ const { t } = useI18n()
 const envStore = useEnvironmentStore()
 const collectionsStore = useCollectionsStore()
 const historyStore = useHistoryStore()
+const settingsStore = useSettingsStore()
 const toastRef = ref<InstanceType<typeof UiToast> | null>(null)
+const requestBuilderRef = ref<{ focusRequestUrlInput: () => void } | null>(null)
 
 const showEnvManager = ref(false)
 const showCodeGenerator = ref(false)
 const showCollectionManager = ref(false)
 const showSettings = ref(false)
+const showShortcuts = ref(false)
 const sidebarCollapsed = ref(false)
 const pendingTabClose = ref<PendingTabCloseState | null>(null)
 
@@ -338,7 +358,8 @@ const tabItems = computed(() => {
   return tabs.value.map((tab) => ({
     id: tab.id,
     title: tabTitle(tab),
-    method: tab.request.method || 'GET'
+    method: tab.request.method || 'GET',
+    dirty: isTabDirty(tab)
   }))
 })
 
@@ -467,6 +488,20 @@ function switchTab(tabId: string) {
   if (target) {
     activeTabId.value = tabId
   }
+}
+
+function switchTabByOffset(offset: 1 | -1) {
+  if (tabs.value.length <= 1) {
+    return
+  }
+  const currentIndex = tabs.value.findIndex((tab) => tab.id === activeTabId.value)
+  const baseIndex = currentIndex === -1 ? 0 : currentIndex
+  const targetIndex = (baseIndex + offset + tabs.value.length) % tabs.value.length
+  activeTabId.value = tabs.value[targetIndex].id
+}
+
+function closeCurrentTab() {
+  closeTab(activeTabId.value)
 }
 
 function closeTab(tabId: string) {
@@ -603,6 +638,113 @@ function confirmPendingTabClose() {
   forceCloseTabs(pendingTabClose.value.ids)
   pendingTabClose.value = null
 }
+
+function isAnyModalOpen(): boolean {
+  return (
+    showEnvManager.value ||
+    showCodeGenerator.value ||
+    showCollectionManager.value ||
+    showSettings.value ||
+    showShortcuts.value ||
+    pendingTabClose.value !== null
+  )
+}
+
+function sendOrToggleConnectionShortcut() {
+  if (isSocketMethod.value) {
+    if (!activeTab.value.request.url || activeTab.value.request.socket.status === 'connecting') {
+      return
+    }
+    if (activeTab.value.request.socket.status === 'connected') {
+      onDisconnectSocket()
+      return
+    }
+    onConnectSocket()
+    return
+  }
+
+  if (activeTab.value.sending || !activeTab.value.request.url) {
+    return
+  }
+
+  onSend()
+}
+
+function focusRequestUrlInputShortcut() {
+  requestBuilderRef.value?.focusRequestUrlInput()
+}
+
+function toggleResponsePanelShortcut() {
+  if (!showResponsePanel.value) {
+    return
+  }
+  responseCollapsed.value = !responseCollapsed.value
+}
+
+async function replayOnboarding() {
+  showSettings.value = false
+  showShortcuts.value = false
+  await onboarding.replay()
+}
+
+const onboarding = useOnboarding({
+  t,
+  hasSeen: () => settingsStore.hasSeenOnboarding(),
+  markSeen: () => settingsStore.setOnboardingSeen(true),
+  prepareUi: () => {
+    showEnvManager.value = false
+    showCodeGenerator.value = false
+    showCollectionManager.value = false
+    showSettings.value = false
+    showShortcuts.value = false
+    sidebarCollapsed.value = false
+  }
+})
+
+const shortcuts = useShortcuts(
+  {
+    openShortcuts: () => {
+      showShortcuts.value = true
+    },
+    openSettings: () => {
+      showSettings.value = true
+    },
+    replayOnboarding: () => {
+      replayOnboarding()
+    },
+    newTab,
+    closeCurrentTab,
+    duplicateTab: () => duplicateTab(activeTabId.value),
+    nextTab: () => switchTabByOffset(1),
+    prevTab: () => switchTabByOffset(-1),
+    sendOrToggleConnection: sendOrToggleConnectionShortcut,
+    saveRequest: () => {
+      if (!activeTab.value.sending) {
+        onSave()
+      }
+    },
+    cancelSend: onCancelSend,
+    toggleSidebar: () => {
+      sidebarCollapsed.value = !sidebarCollapsed.value
+    },
+    focusRequestUrl: focusRequestUrlInputShortcut,
+    toggleResponsePanel: toggleResponsePanelShortcut
+  },
+  {
+    enabled: () => settingsStore.isShortcutsEnabled(),
+    isModalOpen: isAnyModalOpen,
+    isSending: () => activeTab.value.sending
+  }
+)
+
+onMounted(() => {
+  shortcuts.mount()
+  onboarding.startIfNeeded()
+})
+
+onBeforeUnmount(() => {
+  shortcuts.unmount()
+})
 
 async function onSend() {
   const variables = envStore.getVariables()

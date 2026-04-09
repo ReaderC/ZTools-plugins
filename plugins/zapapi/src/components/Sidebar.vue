@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar" :class="{ collapsed }">
+  <div class="sidebar" :class="{ collapsed }" data-tour-id="sidebar-root">
     <div class="sidebar-header">
       <span v-show="!collapsed" class="sidebar-header__title">{{ activeTab === 'collections' ? t('sidebar.collections') : t('sidebar.history') }}</span>
       <div class="sidebar-header__actions">

@@ -3,13 +3,16 @@
     <div class="request-bar">
       <UiSelect v-model="request.method" :options="methodOptions" class="request-bar__method" />
       <UiVariableInput
+        ref="requestUrlInputRef"
+        data-tour-id="request-url"
+        data-shortcut-id="request-url-input"
         v-model="request.url"
         :placeholder="t('request.urlPlaceholder')"
         class="request-bar__url"
         @keydown="(e: KeyboardEvent) => e.key === 'Enter' && (!isSocket ? $emit('send') : (request.socket.status === 'connected' ? $emit('disconnect') : $emit('connect')))"
       />
       <template v-if="!isSocket">
-        <UiButton variant="primary" size="sm" class="request-bar__send" :disabled="sending || !request.url" @click="$emit('send')">
+        <UiButton data-tour-id="request-send" variant="primary" size="sm" class="request-bar__send" :disabled="sending || !request.url" @click="$emit('send')">
           <svg v-if="!sending" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
@@ -45,7 +48,7 @@
           </template>
         </UiButton>
       </template>
-      <UiButton variant="secondary" size="sm" class="request-bar__save" :disabled="sending" @click="$emit('save')">
+      <UiButton data-tour-id="request-save" variant="secondary" size="sm" class="request-bar__save" :disabled="sending" @click="$emit('save')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
           <polyline points="17 21 17 13 7 13 7 21"/>
@@ -503,6 +506,7 @@ defineEmits<{
 
 const activeTab = ref('params')
 const socketMessage = ref('')
+const requestUrlInputRef = ref<{ focus: () => void } | null>(null)
 const JWT_ADVANCED_STORAGE_KEY = 'zapapi_jwt_advanced_open'
 
 function loadJwtAdvancedOpen(): boolean {
@@ -527,6 +531,14 @@ function handleSocketSend() {
     // $emit expects string
   }
 }
+
+function focusRequestUrlInput() {
+  requestUrlInputRef.value?.focus()
+}
+
+defineExpose({
+  focusRequestUrlInput
+})
 
 const methodOptions = [
   {

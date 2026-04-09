@@ -4,6 +4,8 @@ export type ThemeMode = 'system' | 'dark' | 'light'
 
 interface SettingsState {
   theme: ThemeMode
+  onboardingSeen: boolean
+  shortcutsEnabled: boolean
 }
 
 const STORAGE_KEY = 'zapapi-settings'
@@ -18,12 +20,18 @@ function loadSettings(): SettingsState {
     if (raw) {
       const parsed = JSON.parse(raw)
       return {
-        theme: isThemeMode(parsed.theme) ? parsed.theme : 'system'
+        theme: isThemeMode(parsed.theme) ? parsed.theme : 'system',
+        onboardingSeen: Boolean(parsed.onboardingSeen),
+        shortcutsEnabled: parsed.shortcutsEnabled !== false
       }
     }
   } catch {}
 
-  return { theme: 'system' }
+  return {
+    theme: 'system',
+    onboardingSeen: false,
+    shortcutsEnabled: true
+  }
 }
 
 function saveSettings(state: SettingsState): void {
@@ -81,10 +89,32 @@ export function useSettingsStore() {
     return state.value.theme
   }
 
+  function hasSeenOnboarding(): boolean {
+    return state.value.onboardingSeen
+  }
+
+  function setOnboardingSeen(seen: boolean): void {
+    state.value.onboardingSeen = seen
+    saveSettings(state.value)
+  }
+
+  function isShortcutsEnabled(): boolean {
+    return state.value.shortcutsEnabled
+  }
+
+  function setShortcutsEnabled(enabled: boolean): void {
+    state.value.shortcutsEnabled = enabled
+    saveSettings(state.value)
+  }
+
   return {
     state,
     setTheme,
     getTheme,
-    getActualTheme
+    getActualTheme,
+    hasSeenOnboarding,
+    setOnboardingSeen,
+    isShortcutsEnabled,
+    setShortcutsEnabled
   }
 }

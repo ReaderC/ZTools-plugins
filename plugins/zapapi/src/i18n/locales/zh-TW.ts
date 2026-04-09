@@ -283,6 +283,10 @@ export default {
     title: '設定',
     theme: '主題模式',
     language: '語言',
+    accessibility: '引導與快捷鍵',
+    openShortcuts: '檢視快捷鍵',
+    replayOnboarding: '重新播放新手引導',
+    shortcutsEnabled: '啟用全域快捷鍵',
     about: '關於專案',
     techStack: '技術堆疊',
     systemTheme: '跟隨系統',
@@ -294,6 +298,89 @@ export default {
     langZhCN: '简体中文',
     langZhTW: '繁體中文',
     langEn: 'English'
+  },
+
+  shortcuts: {
+    title: '快捷鍵',
+    intro: '常用操作支援全域快捷鍵，可大幅提升除錯效率。',
+    groups: {
+      global: '全域',
+      tabs: '分頁',
+      request: '請求操作',
+      layout: '版面與導覽'
+    },
+    items: {
+      openHelp: '開啟快捷鍵說明',
+      openSettings: '開啟設定',
+      replayGuide: '重新播放新手引導',
+      newTab: '新建分頁',
+      closeTab: '關閉目前分頁',
+      duplicateTab: '複製目前分頁',
+      nextTab: '切換到下一個分頁',
+      prevTab: '切換到上一個分頁',
+      sendRequest: '發送請求 / 連線 Socket',
+      saveRequest: '儲存目前請求',
+      cancelRequest: '取消目前發送',
+      toggleSidebar: '收合/展開側欄',
+      focusUrl: '聚焦 URL 輸入框',
+      toggleResponse: '收合/展開回應面板'
+    },
+    keys: {
+      help: '?',
+      openSettings: 'Ctrl/Cmd + ,',
+      replayGuide: 'Ctrl/Cmd + Shift + H',
+      newTab: 'Ctrl/Cmd + Alt + T',
+      closeTab: 'Ctrl/Cmd + Alt + W',
+      duplicateTab: 'Ctrl/Cmd + D',
+      nextTab: 'Ctrl/Cmd + Shift + ]',
+      prevTab: 'Ctrl/Cmd + Shift + [',
+      sendRequest: 'Ctrl/Cmd + Enter',
+      saveRequest: 'Ctrl/Cmd + S',
+      cancelRequest: 'Esc',
+      toggleSidebar: 'Ctrl/Cmd + B',
+      focusUrl: 'Ctrl/Cmd + K',
+      toggleResponse: 'Ctrl/Cmd + Shift + R'
+    }
+  },
+
+  onboarding: {
+    next: '下一步',
+    prev: '上一步',
+    done: '完成',
+    steps: {
+      env: {
+        title: '環境切換',
+        desc: '在此選擇目前啟用環境，變數會自動注入請求。'
+      },
+      sidebar: {
+        title: '集合與歷史',
+        desc: '左側可管理集合、請求與歷史記錄，雙擊請求可在新分頁開啟。'
+      },
+      tabs: {
+        title: '多分頁除錯',
+        desc: '每個分頁都保有獨立請求狀態，方便同時除錯多個介面。'
+      },
+      url: {
+        title: '請求位址',
+        desc: '輸入 URL，支援變數插值。按 Ctrl/Cmd + Enter 可快速發送。'
+      },
+      send: {
+        title: '發送請求',
+        desc: '點擊發送可送出請求；Socket 模式下此按鈕用於連線/中斷。'
+      },
+      save: {
+        title: '儲存請求',
+        desc: '將目前請求儲存到集合，便於重用與團隊協作。'
+      },
+      response: {
+        title: '回應面板',
+        desc: '查看狀態碼、回應標頭與回應主體，並支援搜尋、篩選與複製。'
+      },
+      shortcuts: {
+        title: '快捷鍵入口',
+        desc: '點擊此處可隨時查看完整快捷鍵清單。輸入 ? 也能快速開啟。'
+      }
+    }
   },
 
   tech: {

@@ -1,5 +1,5 @@
 <template>
-  <div class="response-viewer">
+  <div class="response-viewer" data-tour-id="response-panel">
     <div class="response-topbar">
       <div class="response-main-tabs">
         <button

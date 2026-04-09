@@ -58,3 +58,7 @@ temp/
 
 # Local agent/tooling metadata
 .opencode/
+.ruff_cache/
+
+# pnpm lock file
+pnpm-lock.yaml

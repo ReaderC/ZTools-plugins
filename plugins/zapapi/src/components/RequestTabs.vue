@@ -1,210 +1,83 @@
-<style scoped>
-.request-tabs {
-  display: flex;
-  align-items: center;
-  height: 38px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-color);
-  user-select: none;
-  position: relative;
-  overflow: hidden;
-}
+<template>
+  <div ref="tabsRootRef" class="request-tabs" @contextmenu.prevent>
+    <UiTooltip v-if="isOverflowing" :content="t('tabs.scrollLeft')" placement="bottom">
+      <UiButton variant="ghost" size="xs" icon-only class="request-tabs__nav" :disabled="!canScrollLeft" @click="scrollTabsBy(-1)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="15 18 9 12 15 6"/></svg>
+      </UiButton>
+    </UiTooltip>
 
-.request-tabs__list {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
+    <div ref="tabsListRef" class="request-tabs__list" @scroll="updateScrollState" @wheel.prevent="onTabsWheel">
+      <div ref="tabsTrackRef" class="request-tabs__track">
+        <div
+          v-for="tab in props.tabs"
+          :key="tab.id"
+          class="request-tabs__item"
+          :class="{ 'request-tabs__item--active': tab.id === props.activeTabId, 'request-tabs__item--dirty': !!tab.dirty }"
+          @click="onTabClick($event, tab.id)"
+          @contextmenu.prevent="openContextMenu($event, tab.id)"
+          @dblclick.stop="openRenameDialog(tab.id, tab.title)"
+        >
+          <span class="request-tabs__method" :class="tab.method.toLowerCase()">{{ tab.method }}</span>
+          <span class="request-tabs__title">{{ tab.title }}</span>
+          <UiTooltip v-if="tab.dirty" :content="t('tabs.unsavedTitle')" placement="bottom">
+            <span class="request-tabs__dirty" aria-hidden="true"></span>
+          </UiTooltip>
+          <UiTooltip :content="t('tabs.closeCurrent')" placement="bottom">
+            <UiButton variant="ghost" size="xs" icon-only class="request-tabs__close" @click.stop="emit('close', tab.id)">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </UiButton>
+          </UiTooltip>
+        </div>
 
-.request-tabs__list::-webkit-scrollbar {
-  display: none;
-}
+        <div v-if="!isOverflowing" ref="inlineNewButtonRef" class="request-tabs__new-wrap">
+          <UiTooltip :content="t('tabs.newTab')" placement="bottom">
+            <UiButton variant="ghost" size="sm" icon-only class="request-tabs__new" @click="emit('new')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </UiButton>
+          </UiTooltip>
+        </div>
+      </div>
+    </div>
 
-.request-tabs__track {
-  display: flex;
-  height: 100%;
-}
+    <div v-if="isOverflowing" ref="fixedNewButtonRef" class="request-tabs__new-fixed">
+      <UiTooltip :content="t('tabs.newTab')" placement="bottom">
+        <UiButton variant="ghost" size="sm" icon-only class="request-tabs__new" @click="emit('new')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </UiButton>
+      </UiTooltip>
+      <UiTooltip :content="t('tabs.scrollRight')" placement="bottom">
+        <UiButton variant="ghost" size="xs" icon-only class="request-tabs__nav" :disabled="!canScrollRight" @click="scrollTabsBy(1)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="9 18 15 12 9 6"/></svg>
+        </UiButton>
+      </UiTooltip>
+    </div>
 
-.request-tabs__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  height: 100%;
-  min-width: 120px;
-  max-width: 240px;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-color);
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
-  border-bottom: 2px solid transparent;
-}
+    <div v-if="contextMenu.visible" class="request-tabs__context-overlay" @click="closeContextMenu" />
+    <div v-if="contextMenu.visible" class="request-tabs__context-menu" :style="contextMenuStyle">
+      <button class="request-tabs__context-item" @click="runMenuAction('close')">{{ t('tabs.closeCurrent') }}</button>
+      <button class="request-tabs__context-item" @click="runMenuAction('closeOthers')">{{ t('tabs.closeOthers') }}</button>
+      <button class="request-tabs__context-item" @click="runMenuAction('closeRight')">{{ t('tabs.closeRight') }}</button>
+      <div class="request-tabs__context-divider" />
+      <button class="request-tabs__context-item" @click="runMenuAction('duplicate')">{{ t('tabs.duplicate') }}</button>
+      <button class="request-tabs__context-item" @click="openRenameDialog(contextMenu.tabId, props.tabs.find((item) => item.id === contextMenu.tabId)?.title || '')">{{ t('tabs.renameTitle') }}</button>
+    </div>
 
-.request-tabs__item:hover {
-  background: var(--bg-elevated);
-}
-
-.request-tabs__item--active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border-bottom: 2px solid var(--accent-primary);
-}
-
-.request-tabs__method {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-  text-transform: uppercase;
-}
-
-/* Postman colors for methods */
-.request-tabs__method.get { color: #0b975d; }
-.request-tabs__method.post { color: #ffb400; }
-.request-tabs__method.put { color: #0072c6; }
-.request-tabs__method.delete { color: #d12915; }
-.request-tabs__method.patch { color: #ba6bd1; }
-.request-tabs__method.options { color: #8e44ad; }
-
-.request-tabs__title {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.request-tabs__close {
-  opacity: 0;
-  color: var(--text-muted);
-}
-
-.request-tabs__item:hover .request-tabs__close,
-.request-tabs__item--active .request-tabs__close {
-  opacity: 1;
-}
-
-.request-tabs__close:hover {
-  color: var(--text-primary);
-  background: var(--bg-overlay);
-}
-
-.request-tabs__nav {
-  height: 100%;
-  border-radius: 0;
-  color: var(--text-muted);
-  border-right: 1px solid var(--border-color);
-  border-left: 1px solid var(--border-color);
-}
-
-.request-tabs__new-wrap,
-.request-tabs__new-fixed {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  padding: 0 4px;
-}
-
-.request-tabs__new {
-  height: 24px;
-  width: 24px;
-  color: var(--text-muted);
-}
-
-.request-tabs__new:hover {
-  color: var(--text-primary);
-}
-
-.request-tabs__context-overlay,
-.request-tabs__rename-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-}
-
-.request-tabs__rename-overlay {
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.request-tabs__context-menu {
-  position: absolute;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md);
-  padding: 4px 0;
-  min-width: 160px;
-}
-
-.request-tabs__context-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.request-tabs__context-item:hover {
-  background: var(--bg-elevated);
-}
-
-.request-tabs__context-divider {
-  height: 1px;
-  background: var(--border-color);
-  margin: 4px 0;
-}
-
-.request-tabs__rename-dialog {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  width: 400px;
-  overflow: hidden;
-}
-
-.request-tabs__rename-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--bg-elevated);
-  cursor: move;
-}
-
-.request-tabs__rename-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.request-tabs__rename-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.request-tabs__rename-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-</style>
+    <div v-if="showRenameDialog" class="request-tabs__rename-overlay" @click="closeRenameDialog" />
+    <div v-if="showRenameDialog" class="request-tabs__rename-dialog" :style="renameDialogStyle" @click.stop>
+      <div class="request-tabs__rename-header" @mousedown="startDragDialog">
+        <h3 class="request-tabs__rename-title">{{ t('tabs.renameTitle') }}</h3>
+      </div>
+      <div class="request-tabs__rename-body">
+        <UiInput ref="renameInputRef" v-model="renameValue" :placeholder="t('tabs.renamePlaceholder')" @keydown.enter="confirmRename" @keydown.escape="closeRenameDialog" />
+        <div class="request-tabs__rename-actions">
+          <UiButton variant="ghost" size="sm" @click="closeRenameDialog">{{ t('common.cancel') }}</UiButton>
+          <UiButton variant="primary" size="sm" @click="confirmRename">{{ t('common.confirm') }}</UiButton>
+        </div>
+      </div>
+      <button class="request-tabs__resize-handle" :aria-label="t('tabs.resizeDialog')" @mousedown.prevent="startResizeDialog" />
+    </div>
+  </div>
+</template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
@@ -217,6 +90,7 @@ interface RequestTabItem {
   id: string
   title: string
   method: string
+  dirty?: boolean
 }
 
 type ContextAction = 'close' | 'closeOthers' | 'closeRight' | 'duplicate'
@@ -231,11 +105,7 @@ const { t } = useI18n()
 const showRenameDialog = ref(false)
 const renameTabId = ref('')
 const renameValue = ref('')
-const renameInputRef = ref<{
-  focus: () => void
-  select: () => void
-  focusAndSelect: () => void
-} | null>(null)
+const renameInputRef = ref<{ focusAndSelect: () => void } | null>(null)
 
 const DIALOG_STATE_KEY = 'zapapi_request_tab_rename_dialog'
 const DIALOG_MIN_WIDTH = 320
@@ -287,13 +157,28 @@ const contextMenuStyle = computed(() => ({
   top: `${contextMenu.value.y}px`
 }))
 
-function openContextMenu(event: MouseEvent, tabId: string) {
+function openContextMenuAt(x: number, y: number, tabId: string) {
   const menuWidth = 150
-  const menuHeight = 152
+  const menuHeight = 184
   contextMenu.value.visible = true
   contextMenu.value.tabId = tabId
-  contextMenu.value.x = Math.max(8, Math.min(event.clientX, window.innerWidth - menuWidth - 8))
-  contextMenu.value.y = Math.max(8, Math.min(event.clientY, window.innerHeight - menuHeight - 8))
+  contextMenu.value.x = Math.max(8, Math.min(x, window.innerWidth - menuWidth - 8))
+  contextMenu.value.y = Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8))
+}
+
+function onTabClick(event: MouseEvent, tabId: string) {
+  emit('select', tabId)
+  const current = event.currentTarget as HTMLElement | null
+  if (!current) {
+    openContextMenuAt(event.clientX, event.clientY, tabId)
+    return
+  }
+  const rect = current.getBoundingClientRect()
+  openContextMenuAt(rect.left + 8, rect.bottom + 6, tabId)
+}
+
+function openContextMenu(event: MouseEvent, tabId: string) {
+  openContextMenuAt(event.clientX, event.clientY, tabId)
 }
 
 function closeContextMenu() {
@@ -303,37 +188,26 @@ function closeContextMenu() {
 
 function runMenuAction(action: ContextAction) {
   const tabId = contextMenu.value.tabId
-  if (!tabId) {
-    return
-  }
-
+  if (!tabId) return
   if (action === 'close') emit('close', tabId)
   if (action === 'closeOthers') emit('closeOthers', tabId)
   if (action === 'closeRight') emit('closeRight', tabId)
   if (action === 'duplicate') emit('duplicate', tabId)
-
   closeContextMenu()
 }
 
 function updateNewButtonWidth() {
   const source = inlineNewButtonRef.value || fixedNewButtonRef.value
-  if (!source) {
-    return
-  }
+  if (!source) return
   measuredNewButtonWidth.value = Math.max(source.offsetWidth, 28)
 }
 
 function updateOverflowState() {
-  if (!tabsRootRef.value || !tabsTrackRef.value) {
-    return
-  }
-
+  if (!tabsRootRef.value || !tabsTrackRef.value) return
   updateNewButtonWidth()
-
   const rootWidth = tabsRootRef.value.clientWidth
   const tabsWidth = tabsTrackRef.value.scrollWidth
-  const spacing = 8
-  isOverflowing.value = tabsWidth + measuredNewButtonWidth.value + spacing > rootWidth
+  isOverflowing.value = tabsWidth + measuredNewButtonWidth.value + 8 > rootWidth
   updateScrollState()
 }
 
@@ -343,37 +217,24 @@ function updateScrollState() {
     canScrollRight.value = false
     return
   }
-
   const maxScrollLeft = tabsListRef.value.scrollWidth - tabsListRef.value.clientWidth
   canScrollLeft.value = tabsListRef.value.scrollLeft > 2
   canScrollRight.value = tabsListRef.value.scrollLeft < maxScrollLeft - 2
 }
 
 function scrollTabsToEnd(behavior: ScrollBehavior = 'smooth') {
-  if (!tabsListRef.value) {
-    return
-  }
-  tabsListRef.value.scrollTo({
-    left: tabsListRef.value.scrollWidth,
-    behavior
-  })
+  if (!tabsListRef.value) return
+  tabsListRef.value.scrollTo({ left: tabsListRef.value.scrollWidth, behavior })
   updateScrollState()
 }
 
 function scrollTabsBy(direction: -1 | 1) {
-  if (!tabsListRef.value) {
-    return
-  }
-  tabsListRef.value.scrollBy({
-    left: direction * 220,
-    behavior: 'smooth'
-  })
+  if (!tabsListRef.value) return
+  tabsListRef.value.scrollBy({ left: direction * 220, behavior: 'smooth' })
 }
 
 function onTabsWheel(event: WheelEvent) {
-  if (!tabsListRef.value || !isOverflowing.value) {
-    return
-  }
+  if (!tabsListRef.value || !isOverflowing.value) return
   tabsListRef.value.scrollLeft += event.deltaY + event.deltaX
   updateScrollState()
 }
@@ -383,9 +244,8 @@ function openRenameDialog(tabId: string, title: string) {
   renameTabId.value = tabId
   renameValue.value = title
   showRenameDialog.value = true
-  nextTick(() => {
-    renameInputRef.value?.focusAndSelect()
-  })
+  closeContextMenu()
+  nextTick(() => renameInputRef.value?.focusAndSelect())
 }
 
 function closeRenameDialog() {
@@ -397,9 +257,7 @@ function closeRenameDialog() {
 
 function confirmRename() {
   const value = renameValue.value.trim()
-  if (!value || !renameTabId.value) {
-    return
-  }
+  if (!value || !renameTabId.value) return
   emit('rename', renameTabId.value, value)
   closeRenameDialog()
 }
@@ -436,7 +294,6 @@ function restoreDialogState() {
       dialogTop.value = centered.top
       return
     }
-
     const parsed = JSON.parse(raw) as { width?: number; left?: number; top?: number }
     const centered = getCenteredDialogPosition(parsed.width ?? dialogWidth.value)
     dialogWidth.value = centered.width
@@ -452,27 +309,22 @@ function restoreDialogState() {
 }
 
 function persistDialogState() {
-  const payload = {
+  localStorage.setItem(DIALOG_STATE_KEY, JSON.stringify({
     width: dialogWidth.value,
     left: dialogLeft.value,
     top: dialogTop.value
-  }
-  localStorage.setItem(DIALOG_STATE_KEY, JSON.stringify(payload))
+  }))
 }
 
 function startDragDialog(event: MouseEvent) {
-  if (event.button !== 0) {
-    return
-  }
+  if (event.button !== 0) return
   isDragging.value = true
   dragOffsetX.value = event.clientX - dialogLeft.value
   dragOffsetY.value = event.clientY - dialogTop.value
 }
 
 function startResizeDialog(event: MouseEvent) {
-  if (event.button !== 0) {
-    return
-  }
+  if (event.button !== 0) return
   isResizing.value = true
   resizeStartX.value = event.clientX
   resizeStartWidth.value = dialogWidth.value
@@ -484,7 +336,6 @@ function onMouseMove(event: MouseEvent) {
     dialogTop.value = event.clientY - dragOffsetY.value
     keepDialogInViewport()
   }
-
   if (isResizing.value) {
     const nextWidth = resizeStartWidth.value + (event.clientX - resizeStartX.value)
     dialogWidth.value = Math.min(Math.max(nextWidth, DIALOG_MIN_WIDTH), DIALOG_MAX_WIDTH)
@@ -493,9 +344,7 @@ function onMouseMove(event: MouseEvent) {
 }
 
 function stopInteraction() {
-  if (!isDragging.value && !isResizing.value) {
-    return
-  }
+  if (!isDragging.value && !isResizing.value) return
   isDragging.value = false
   isResizing.value = false
   persistDialogState()
@@ -506,7 +355,6 @@ function onKeydown(event: KeyboardEvent) {
     closeContextMenu()
     return
   }
-
   if (event.key === 'Escape' && showRenameDialog.value) {
     closeRenameDialog()
   }
@@ -519,7 +367,6 @@ watch(showRenameDialog, (visible) => {
     window.addEventListener('keydown', onKeydown)
     return
   }
-
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', stopInteraction)
   window.removeEventListener('keydown', onKeydown)
@@ -547,13 +394,8 @@ watch(isOverflowing, () => {
 
 onMounted(() => {
   updateOverflowState()
-  if (!tabsRootRef.value || !tabsTrackRef.value) {
-    return
-  }
-
-  resizeObserver = new ResizeObserver(() => {
-    updateOverflowState()
-  })
+  if (!tabsRootRef.value || !tabsTrackRef.value) return
+  resizeObserver = new ResizeObserver(() => updateOverflowState())
   resizeObserver.observe(tabsRootRef.value)
   resizeObserver.observe(tabsTrackRef.value)
   window.addEventListener('resize', updateOverflowState)
@@ -564,9 +406,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseup', stopInteraction)
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('resize', updateOverflowState)
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-  }
+  if (resizeObserver) resizeObserver.disconnect()
 })
 </script>
 
@@ -579,6 +419,7 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-base);
   height: 36px;
+  user-select: none;
 }
 
 .request-tabs__list {
@@ -592,15 +433,15 @@ onBeforeUnmount(() => {
   -ms-overflow-style: none;
 }
 
+.request-tabs__list::-webkit-scrollbar {
+  display: none;
+}
+
 .request-tabs__track {
   display: flex;
   align-items: flex-end;
   height: 100%;
   flex-shrink: 0;
-}
-
-.request-tabs__list::-webkit-scrollbar {
-  display: none;
 }
 
 .request-tabs__item {
@@ -664,8 +505,27 @@ onBeforeUnmount(() => {
   opacity: 0;
   border-radius: 4px;
 }
-.request-tabs__close:hover {
-  background: var(--border-color);
+
+.request-tabs__dirty {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning-color);
+  display: inline-block;
+  flex-shrink: 0;
+  margin-left: 2px;
+  opacity: 1;
+  transition: opacity var(--transition-fast);
+}
+
+.request-tabs__item:hover .request-tabs__close,
+.request-tabs__item--active:not(.request-tabs__item--dirty) .request-tabs__close,
+.request-tabs__item--dirty:hover .request-tabs__close {
+  opacity: 1;
+}
+
+.request-tabs__item--dirty:hover .request-tabs__dirty {
+  opacity: 0;
 }
 
 .request-tabs__new {
@@ -678,9 +538,6 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-.request-tabs__new:hover {
-  background: var(--bg-surface);
 }
 
 .request-tabs__new-wrap,
@@ -695,17 +552,6 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--border-color);
 }
 
-.request-tabs__item:hover .request-tabs__close,
-.request-tabs__item--active .request-tabs__close {
-  opacity: 1;
-}
-
-.request-tabs__rename-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-sm);
-}
-
 .request-tabs__context-overlay {
   position: fixed;
   inset: 0;
@@ -718,7 +564,7 @@ onBeforeUnmount(() => {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 4px;
   display: flex;
   flex-direction: column;
@@ -760,7 +606,7 @@ onBeforeUnmount(() => {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   z-index: 9201;
 }
@@ -788,6 +634,12 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.request-tabs__rename-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
 }
 
 .request-tabs__resize-handle {

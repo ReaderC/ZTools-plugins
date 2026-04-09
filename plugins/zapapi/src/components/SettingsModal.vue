@@ -76,6 +76,24 @@
             />
           </div>
 
+          <div class="settings-section">
+            <h4 class="section-label">{{ t('settings.accessibility') }}</h4>
+            <div class="settings-actions">
+              <button class="settings-action" type="button" @click="emit('open-shortcuts')">
+                <span class="settings-action__label">{{ t('settings.openShortcuts') }}</span>
+                <span class="settings-action__hint">{{ t('shortcuts.keys.help') }}</span>
+              </button>
+              <button class="settings-action" type="button" @click="emit('replay-onboarding')">
+                <span class="settings-action__label">{{ t('settings.replayOnboarding') }}</span>
+                <span class="settings-action__hint">{{ t('shortcuts.keys.replayGuide') }}</span>
+              </button>
+            </div>
+            <label class="settings-toggle" for="shortcuts-enabled">
+              <span class="settings-toggle__label">{{ t('settings.shortcutsEnabled') }}</span>
+              <input id="shortcuts-enabled" v-model="shortcutsEnabled" type="checkbox" />
+            </label>
+          </div>
+
           <!-- About Section -->
           <div class="settings-section">
             <h4 class="section-label">{{ t('settings.about') }}</h4>
@@ -166,8 +184,15 @@ function changeLocale(loc: 'zh-CN' | 'zh-TW' | 'en' | 'system') {
 
 const theme = computed(() => settings.getTheme())
 
-defineEmits<{
+const shortcutsEnabled = computed({
+  get: () => settings.isShortcutsEnabled(),
+  set: (enabled: boolean) => settings.setShortcutsEnabled(enabled)
+})
+
+const emit = defineEmits<{
   close: []
+  'open-shortcuts': []
+  'replay-onboarding': []
 }>()
 </script>
 
@@ -337,6 +362,63 @@ defineEmits<{
 /* Language Select */
 .lang-select {
   width: 100%;
+}
+
+.settings-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.settings-action:hover {
+  border-color: var(--border-color-hover);
+  background: var(--bg-elevated);
+}
+
+.settings-action__label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.settings-action__hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.settings-toggle__label {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.settings-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
 }
 
 /* About Card */
