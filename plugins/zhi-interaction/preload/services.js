@@ -12,7 +12,7 @@ let popupLock = false
  * 等待子窗口返回结果
  * 通过 executeJavaScript 轮询子窗口的 __zhiResult 变量
  */
-function waitForPopupResult(win) {
+function waitForPopupResult(win, onBeforeDestroy) {
   return new Promise((resolve) => {
     function poll() {
       setTimeout(async () => {
@@ -52,7 +52,10 @@ function waitForPopupResult(win) {
               return
             }
 
-            // 拿到结果后关闭窗口
+            // 拿到结果后关闭窗口（先保存 bounds）
+            try {
+              if (onBeforeDestroy) onBeforeDestroy(win)
+            } catch (e) { /* ignore */ }
             try {
               win.destroy()
             } catch (e) {
@@ -92,21 +95,45 @@ async function showZhiPopup(input) {
 
   try {
     const result = await new Promise((resolve) => {
+      // 读取上次保存的窗口大小和位置
+      let savedBounds = null
+      try {
+        const raw = window.ztools.dbStorage.getItem('zhi-popup-bounds')
+        if (raw) savedBounds = JSON.parse(raw)
+      } catch (e) { /* ignore */ }
+
+      const winOptions = savedBounds
+        ? {
+            title: 'Zhi - 等待响应',
+            width: savedBounds.width || 640,
+            height: savedBounds.height || 556,
+            x: savedBounds.x,
+            y: savedBounds.y,
+            center: false,
+            alwaysOnTop: true,
+            resizable: true,
+            minimizable: true,
+            maximizable: false,
+            show: false,
+            frame: false
+          }
+        : {
+            title: 'Zhi - 等待响应',
+            width: 640,
+            height: 556,
+            center: true,
+            alwaysOnTop: true,
+            resizable: true,
+            minimizable: true,
+            maximizable: false,
+            show: false,
+            frame: false
+          }
+
       // 创建弹窗窗口
       const win = window.ztools.createBrowserWindow(
         'popup.html',
-        {
-          title: 'Zhi - 等待响应',
-          width: 640,
-          height: 556,
-          center: true,
-          alwaysOnTop: true,
-          resizable: true,
-          minimizable: true,
-          maximizable: false,
-          show: false,
-          frame: false
-        },
+        winOptions,
         () => {
           // dom-ready 回调：注入请求数据，然后显示窗口
           const requestData = {
@@ -131,8 +158,10 @@ async function showZhiPopup(input) {
         }
       )
 
-      // 开始轮询结果
-      waitForPopupResult(win).then(resolve)
+      // 开始轮询结果（关窗前保存 bounds）
+      waitForPopupResult(win, (w) => {
+        window.ztools.dbStorage.setItem('zhi-popup-bounds', JSON.stringify(w.getBounds()))
+      }).then(resolve)
     })
 
     return result
@@ -201,6 +230,16 @@ window.ztools.registerTool('zhi', async (input) => {
 
   // 处理取消
   if (result.cancelled) {
+    // 用户点击"结束会话"，立即终止对话
+    if (result.endSession) {
+      consecutiveCancels = 0
+      return {
+        content: '用户主动结束了对话。不要再调用 zhi。',
+        cancelled: true,
+        _rule: 'STOP. The user has ended the session. Do NOT call zhi again.'
+      }
+    }
+
     consecutiveCancels++
 
     if (consecutiveCancels >= 2) {

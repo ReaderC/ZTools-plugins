@@ -3,7 +3,7 @@
   "title": "Zhi 智能交互",
   "description": "MCP 阻塞式用户交互工具，AI 通过弹窗与用户确认、提问、获取反馈",
   "author": "Zing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "logo": "logo.png",
   "main": "index.html",
   "preload": "preload/services.js",

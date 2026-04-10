@@ -290,6 +290,16 @@
         cursor: not-allowed;
       }
 
+      .btn-end {
+        background: transparent;
+        color: #f38ba8;
+        border: 1px solid rgba(243, 139, 168, 0.4);
+      }
+      .btn-end:hover {
+        background: rgba(243, 139, 168, 0.15);
+        border-color: #f38ba8;
+      }
+
       /* ── 加载状态 ── */
       .loading {
         display: flex;
@@ -571,6 +581,7 @@
           <span class="shortcut-hint" id="shortcutHint"></span>
         </div>
         <div class="actions-right">
+          <button class="btn-end" onclick="handleEndSession()">结束会话</button>
           <button class="btn-cancel" onclick="handleCancel()">取消</button>
           <button class="btn-continue" onclick="handleContinue()">继续</button>
           <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">发送</button>
@@ -595,11 +606,26 @@
         }
       })()
 
+      // ── 置顶初始化 ──
+      ;(function initPin() {
+        const saved = window.ztools.dbStorage.getItem('zhi-popup-pin')
+        if (saved === '0') {
+          // 延迟到下一 tick，确保 DOM 已就绪
+          setTimeout(() => {
+            isPinned = false
+            const btn = document.getElementById('pinBtn')
+            btn.classList.remove('pinned')
+            btn.title = '置顶'
+            window.__zhiResult = { _action: 'togglePin', value: false }
+          }, 0)
+        }
+      })()
+
       // ── 状态 ──
       let selectedOptions = []
       let requestData = null
       let images = [] // { dataUrl, name, mediaType }
-      let isPinned = true // 默认置顶
+      let isPinned = window.ztools.dbStorage.getItem('zhi-popup-pin') !== '0' // 默认置顶
 
       // ── 初始化入口 ──
       // 由父窗口通过 executeJavaScript 调用
@@ -677,6 +703,7 @@
 
       function handlePin() {
         isPinned = !isPinned
+        window.ztools.dbStorage.setItem('zhi-popup-pin', isPinned ? '1' : '0')
         window.__zhiResult = { _action: 'togglePin', value: isPinned }
         const btn = document.getElementById('pinBtn')
         if (isPinned) {
@@ -717,6 +744,11 @@
       // ── 取消 ──
       function handleCancel() {
         window.__zhiResult = { cancelled: true }
+      }
+
+      // ── 结束会话 ──
+      function handleEndSession() {
+        window.__zhiResult = { cancelled: true, endSession: true }
       }
 
       // ── 图片粘贴 ──
