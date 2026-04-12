@@ -16,7 +16,7 @@ import ConfirmModal from './components/Modals/ConfirmModal.vue'
 import ImportDataModal from './components/Modals/ImportDataModal.vue'
 import ChangePasswordModal from './components/Modals/ChangePasswordModal.vue'
 import { STORAGE_KEY, CONFIG_KEY, DEFAULT_PINYIN_SCHEME } from './constants'
-import { matchesPinyin, type PinyinScheme } from './utils/pinyin'
+import { matchesPinyinCached, buildPinyinCache, type PinyinScheme, type PinyinCache } from './utils/pinyin'
 
 // --- Composables Initialization ---
 const {
@@ -26,7 +26,7 @@ const {
   passwordErrorMsg, verifyErrorMsg,
   verifyInput, pendingAction,
   tryAutoUnlock, setMasterPassword, verifyMasterPassword,
-  clearAuthData, changeMasterPassword
+  clearAuthData, changeMasterPassword, getHardwareKey
 } = useAuth()
 
 const {
@@ -45,12 +45,35 @@ const {
 } = useDataManagement()
 
 // --- Local UI State ---
-const config = ref({ timerStyle: 'bar', nextPreview: false, pinyinScheme: DEFAULT_PINYIN_SCHEME })
+const config = ref({ timerStyle: 'bar', nextPreview: true, pinyinScheme: DEFAULT_PINYIN_SCHEME })
 const searchQuery = ref('')
+
+// 拼音缓存：账户列表变化时重新计算，搜索时直接复用
+const pinyinCacheMap = ref<Map<string, PinyinCache>>(new Map())
+watch(
+  () => accounts.value.map(a => a.id + '|' + a.name),
+  () => {
+    const newMap = new Map<string, PinyinCache>()
+    for (const acc of accounts.value) {
+      newMap.set(acc.id, buildPinyinCache(acc.name))
+    }
+    pinyinCacheMap.value = newMap
+  },
+  { immediate: true }
+)
+
+// filteredAccounts 携带真实索引，避免模板中 indexOf 的 O(N²) 开销
 const filteredAccounts = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return accounts.value
-  return accounts.value.filter(acc => matchesPinyin(acc.name, q, (config.value.pinyinScheme || DEFAULT_PINYIN_SCHEME) as PinyinScheme))
+  const scheme = (config.value.pinyinScheme || DEFAULT_PINYIN_SCHEME) as PinyinScheme
+  return accounts.value
+    .map((acc, index) => ({ acc, index }))
+    .filter(({ acc }) => {
+      if (!q) return true
+      const cache = pinyinCacheMap.value.get(acc.id)
+      if (!cache) return acc.name.toLowerCase().includes(q)
+      return matchesPinyinCached(acc.name, q, scheme, cache)
+    })
 })
 
 const setupSubInput = () => {
@@ -77,6 +100,7 @@ const activeModalDropdown = ref<string | null>(null)
 const nameError = ref(false)
 const secretError = ref(false)
 const secretErrorMsg = ref('密钥不合法')
+const nameWarn = ref(false)
 
 const menuVisible = ref(false)
 const menuPos = ref({ x: 0, y: 0 })
@@ -117,6 +141,8 @@ const initialize = async () => {
   } else {
     document.documentElement.removeAttribute('data-theme')
   }
+
+  z?.setExpendHeight?.(552)
 
   await loadAccounts(masterSalt, masterKey, config, {
     onAutoUnlock: tryAutoUnlock,
@@ -243,7 +269,8 @@ const handleImportPasswordVerify = async () => {
     accounts.value,
     masterSalt,
     masterKey,
-    config.value
+    config.value,
+    getHardwareKey
   )
 }
 
@@ -301,7 +328,10 @@ const openAddModal = () => {
     algorithm: 'SHA1', digits: 6,
     encrypted: false
   }
-  nameError.value = false; secretError.value = false; secretErrorMsg.value = '密钥不合法'
+  nameError.value = false
+  secretError.value = false
+  secretErrorMsg.value = '密钥不合法'
+  nameWarn.value = false
   showModal.value = true
   showSecret.value = false
   activeModalDropdown.value = null
@@ -324,11 +354,12 @@ const finalizeForm = async () => {
     }
   }
 
-  nameError.value = false; secretError.value = false
+  nameError.value = false
+  secretError.value = false
   const nameVal = (modalForm.value.name || '').toString().trim()
   const secretVal = (modalForm.value.secret || '').toString().trim().replace(/\s/g, '')
 
-  if (!nameVal) { nameError.value = true; return }
+  if (!nameVal) { nameError.value = true; nameWarn.value = false; return }
   if (!secretVal) { secretErrorMsg.value = '请输入密钥'; secretError.value = true; return }
 
   try {
@@ -341,6 +372,14 @@ const finalizeForm = async () => {
   }
 
   const secureAccount = { ...JSON.parse(JSON.stringify(modalForm.value)), name: nameVal, secret: secretVal }
+
+  // 检测同名（排除自身，编辑时不与自己比较）
+  const isDuplicate = accounts.value.some(a => a.name.toLowerCase() === nameVal.toLowerCase() && a.id !== secureAccount.id)
+  if (isDuplicate && !nameWarn.value) {
+    nameWarn.value = true
+    return
+  }
+  nameWarn.value = false
 
   if (secureAccount.id) {
     const idx = accounts.value.findIndex(a => a.id === secureAccount.id)
@@ -380,8 +419,12 @@ const handleAction = (action: string) => {
   if (action === 'edit') {
     modalTitle.value = '修改账号'
     modalForm.value = JSON.parse(JSON.stringify(acc))
-    nameError.value = false; secretError.value = false
-    showModal.value = true; showSecret.value = false; activeModalDropdown.value = null
+    nameError.value = false
+    secretError.value = false
+    nameWarn.value = false
+    showModal.value = true
+    showSecret.value = false
+    activeModalDropdown.value = null
   } else if (action === 'delete') {
     confirmData.value = { name: acc.name, id: acc.id }
     showConfirm.value = true
@@ -510,7 +553,7 @@ onUnmounted(() => { stopTicker(); window.removeEventListener('click', hideContex
       </div>
       <transition-group name="list" tag="div" class="list-container">
         <AccountCard 
-          v-for="(acc, index) in filteredAccounts" 
+          v-for="{ acc, index } in filteredAccounts" 
           :key="acc.id" 
           :acc="acc" 
           :index="index"
@@ -548,16 +591,18 @@ onUnmounted(() => { stopTicker(); window.removeEventListener('click', hideContex
     />
 
     <EditModal 
-      v-model:show="showModal"
+      :show="showModal"
       v-model:modelValue="modalForm"
       v-model:activeDropdown="activeModalDropdown"
       v-model:showSecret="showSecret"
       :title="modalTitle"
       :nameError="nameError"
+      :nameWarn="nameWarn"
       :secretError="secretError"
       :secretErrorMsg="secretErrorMsg"
       @submit="finalizeForm"
       @eye-click="handleEyeClick"
+      @update:show="(v) => { showModal = v; if (!v) nameWarn = false }"
     />
 
     <!-- Priority Modals (Authentication) -->
@@ -745,7 +790,7 @@ onUnmounted(() => { stopTicker(); window.removeEventListener('click', hideContex
   backdrop-filter: blur(14px);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 17.4px 18px;
+  padding: 18px 18px;
   position: relative;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
@@ -963,6 +1008,12 @@ onUnmounted(() => { stopTicker(); window.removeEventListener('click', hideContex
   color: #f25656;
   font-size: 13px; /* 同步标题大小 */
   font-weight: 700; /* 加粗 */
+}
+
+.label-warn {
+  color: #e6a23c;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .settings-select {

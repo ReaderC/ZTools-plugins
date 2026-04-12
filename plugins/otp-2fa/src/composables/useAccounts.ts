@@ -23,7 +23,7 @@ export function useAccounts() {
         if (configRes) {
           if (configRes.salt) masterSalt.value = configRes.salt
           config.value.timerStyle = configRes.timerStyle || 'bar'
-          config.value.nextPreview = !!configRes.nextPreview
+          config.value.nextPreview = configRes.nextPreview ?? true
           config.value.pinyinScheme = configRes.pinyinScheme || 'quanpin'
         }
         
@@ -42,12 +42,15 @@ export function useAccounts() {
       }
     } catch (e) {
       console.error('Load Error:', e)
+      const z2 = (window as any).ztools
+      z2?.showNotification?.('数据加载失败，账户数据可能已损坏')
     }
     hooks.onTokensUpdate()
   }
 
   const decryptAllAccounts = async (masterKey: CryptoKey | null) => {
     if (!masterKey) return
+    const z = (window as any).ztools
     for (const acc of accounts.value) {
       if (acc.encrypted && acc.secret.includes(':')) {
         try {
@@ -55,6 +58,7 @@ export function useAccounts() {
           acc.encrypted = false
         } catch (e) {
           console.error('Decrypt failed for', acc.id, e)
+          z?.showNotification?.(`账户「${acc.name}」数据已损坏，无法解密`)
         }
       }
     }
