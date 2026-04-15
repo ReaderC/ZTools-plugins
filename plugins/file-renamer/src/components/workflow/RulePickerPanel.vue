@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 规则选择面板组件。
+ * @description 显示可用的重命名规则插件列表，支持点击选择并添加到工作流
+ * @see registry 插件注册表的实现
+ */
 import { useI18n } from 'vue-i18n'
 import { registry } from '@/core/registry'
 import { 

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 标签组件。
+ * @description 表单标签组件，用于标识输入字段
+ * @see https://www.radix-vue.com/components/label 官方文档
+ */
 import { Label, type LabelProps } from 'radix-vue'
 import { type HTMLAttributes, computed } from 'vue'
 import { cn } from '@/lib/utils'

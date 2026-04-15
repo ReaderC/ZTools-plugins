@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 表格组件。
+ * @description 基础表格容器组件，提供响应式包装
+ */
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 

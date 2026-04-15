@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 规则卡片组件。
+ * @description 显示单个重命名规则的配置界面，支持动态表单生成和配置修改
+ * @see registry 插件注册表，获取配置schema
+ */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ActionInstance } from '@/core/types'

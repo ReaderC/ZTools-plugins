@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 输入框组件。
+ * @description 基础文本输入组件，支持v-model双向绑定和自定义样式
+ * @see useVModel VueUse组合式函数，用于v-model绑定
+ */
 import type { HTMLAttributes } from 'vue'
 import { useVModel } from '@vueuse/core'
 import { cn } from '@/lib/utils'

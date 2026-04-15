@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * 按钮组件。
+ * @description 基础按钮组件，支持多种变体（default, destructive, outline, secondary, ghost, link）和尺寸
+ * @extends Primitive 来自 radix-vue 的底层原素组件
+ * @see cva class-variance-authority 用于定义按钮样式变体
+ */
 import type { HTMLAttributes } from 'vue'
 import { Primitive, type PrimitiveProps } from 'radix-vue'
 import { type VariantProps, cva } from 'class-variance-authority'

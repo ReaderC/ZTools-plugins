@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * 溢出跑马灯文本组件。
+ * @description 当文本溢出容器时显示跑马灯动画，鼠标悬停显示完整文本的提示
+ * @param text - 显示的文本内容
+ * @param speed - 动画速度（像素/秒）
+ * @uses ResizeObserver 监听容器和文本尺寸变化
+ */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'

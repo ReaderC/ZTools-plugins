@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 开关组件。
+ * @description 二值切换开关，使用Radix Vue的Switch原语实现
+ * @see https://www.radix-vue.com/components/switch 官方文档
+ */
 import { type HTMLAttributes, computed } from 'vue'
 import {
   SwitchRoot,

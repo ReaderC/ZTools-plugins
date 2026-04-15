@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 重命名预览表格组件。
+ * @description 显示文件列表及其重命名预览结果，支持批量选择、删除、还原操作
+ * @requires FileItem 文件数据类型定义
+ */
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FileItem } from '@/core/types'

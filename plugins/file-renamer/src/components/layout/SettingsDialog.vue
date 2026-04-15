@@ -1,4 +1,8 @@
 <script setup lang="ts">
+/**
+ * 设置对话框组件。
+ * @description 应用全局设置配置界面，包括主题、品牌样式、语言和关于信息
+ */
 import { useI18n } from 'vue-i18n'
 import { 
   FRDialog, 

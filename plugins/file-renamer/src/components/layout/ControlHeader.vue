@@ -1,8 +1,12 @@
 <script setup lang="ts">
+/**
+ * 顶部操作栏组件。
+ * @description 提供应用的主要操作入口，包括文件导入、设置访问、新手引导和批量操作功能
+ */
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FRButton, FRTooltip } from '@/components/ui'
-import { FilePlus2, Trash2, Settings, Play, Undo2 } from 'lucide-vue-next'
+import { FilePlus2, Trash2, Settings, Play, Undo2, Sparkles } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
@@ -19,6 +23,7 @@ const emit = defineEmits<{
   (e: 'run'): void
   (e: 'revert-files'): void
   (e: 'delete-files'): void
+  (e: 'start-guide'): void
 }>()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -55,6 +60,7 @@ function onFileChange(e: Event) {
       <div class="flex gap-1.5">
         <FRTooltip :content="t('app.import_files')">
           <button
+            id="onboarding-import-btn"
             type="button"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-xs font-bold h-9 px-3 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-lg shadow-primary/20 gap-2 active:scale-95"
             @click="triggerImport"
@@ -81,10 +87,18 @@ function onFileChange(e: Event) {
           <Settings class="w-4 h-4" />
         </FRButton>
       </FRTooltip>
+
+      <FRTooltip :content="t('app.beginner_guide')">
+        <FRButton id="onboarding-guide-btn" variant="ghost" size="icon" class="rounded-full h-8 w-8 text-muted-foreground"
+          @click="$emit('start-guide')">
+          <Sparkles class="w-4 h-4" />
+        </FRButton>
+      </FRTooltip>
     </div>
 
     <div class="flex items-center gap-2">
       <FRButton
+        id="onboarding-run-btn"
         class="gap-2 px-5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 font-black h-9 text-xs transition-all active:scale-95 disabled:opacity-30 disabled:grayscale"
         :disabled="fileCount === 0" @click="$emit('run')">
         <Play class="w-4 h-4 fill-current" />

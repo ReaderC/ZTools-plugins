@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+/**
+ * 主应用程序入口组件。
+ * 管理文件导入、工作流配置、预览和重命名操作。
+ * @description 作为应用的核心容器，协调文件导入、工作流构建、实时预览和重命名执行的全流程
+ */
+import { onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { registry } from '@/core/registry'
 import { applyWorkflow } from '@/core/engine'
 import type { FileItem, ActionInstance } from '@/core/types'
 import { fsBridge } from '@/core/bridge'
+import { driver } from 'driver.js'
+import type { DriveStep } from 'driver.js'
+import 'driver.js/dist/driver.css'
 
 // 重构组件与 i18n
 import ControlHeader from '@/components/layout/ControlHeader.vue'
@@ -13,22 +21,153 @@ import RenamingTable from '@/components/preview/RenamingTable.vue'
 import SettingsDialog from '@/components/layout/SettingsDialog.vue'
 
 // --- 状态管理 ---
+/** List of files selected for renaming */
 const files = ref<FileItem[]>([])
+/** Ordered list of actions to apply to files */
 const workflow = ref<ActionInstance[]>([])
+/** Whether the settings dialog is currently open */
 const isSettingsOpen = ref(false)
+/** Whether the sidebar is collapsed */
 const isSidebarCollapsed = ref(false)
+/** Visual style for connector lines between actions */
 const lineStyle = ref<'solid' | 'dashed' | 'none'>('solid')
+/** Number of currently selected files */
 const selectedCount = ref(0)
+/** Set of selected file IDs */
 const selectedIds = ref<string[]>([])
+/** Whether the drag preview overlay is active */
 const isDragOverPreview = ref(false)
+/** Current depth during drag operations (for nested folder handling) */
 const dragDepth = ref(0)
+/** Internationalization helper */
 const { t } = useI18n()
+/** Local storage key for tracking onboarding completion */
+const ONBOARDING_STORAGE_KEY = 'fr-onboarding-completed-v1'
+
+/**
+ * Checks if the user has completed the onboarding tutorial.
+ * @returns True if onboarding was previously completed
+ */
+const hasCompletedOnboarding = () => {
+  try {
+    return localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const markOnboardingCompleted = () => {
+  try {
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, '1')
+  } catch {
+    // Ignore localStorage failures in restricted environments.
+  }
+}
+
+const startOnboarding = async (force = false) => {
+  if (!force && hasCompletedOnboarding()) {
+    return
+  }
+
+  await nextTick()
+
+  const steps: DriveStep[] = [
+    {
+      element: '#onboarding-guide-btn',
+      popover: {
+        title: t('onboarding.entry_title'),
+        description: t('onboarding.entry_description'),
+        side: 'bottom' as const,
+        align: 'start' as const
+      }
+    },
+    {
+      element: '#onboarding-import-btn',
+      popover: {
+        title: t('onboarding.import_title'),
+        description: t('onboarding.import_description'),
+        side: 'bottom' as const,
+        align: 'start' as const
+      }
+    },
+    {
+      element: '#onboarding-workflow',
+      popover: {
+        title: t('onboarding.workflow_title'),
+        description: t('onboarding.workflow_description'),
+        side: 'right' as const,
+        align: 'start' as const
+      }
+    },
+    {
+      element: '#onboarding-add-rule-btn',
+      popover: {
+        title: t('onboarding.rule_title'),
+        description: t('onboarding.rule_description'),
+        side: 'right' as const,
+        align: 'start' as const
+      }
+    },
+    {
+      element: '#onboarding-workflow-list',
+      popover: {
+        title: t('onboarding.reorder_title'),
+        description: t('onboarding.reorder_description'),
+        side: 'right' as const,
+        align: 'center' as const
+      }
+    },
+    {
+      element: '#onboarding-preview',
+      popover: {
+        title: t('onboarding.preview_title'),
+        description: t('onboarding.preview_description'),
+        side: 'left' as const,
+        align: 'start' as const
+      }
+    },
+    {
+      element: '#onboarding-run-btn',
+      popover: {
+        title: t('onboarding.run_title'),
+        description: t('onboarding.run_description'),
+        side: 'bottom' as const,
+        align: 'center' as const
+      }
+    }
+  ].filter((step) => Boolean(document.querySelector(step.element)))
+
+  if (steps.length === 0) {
+    return
+  }
+
+  markOnboardingCompleted()
+
+  const tour = driver({
+    showProgress: true,
+    allowClose: true,
+    nextBtnText: t('onboarding.next'),
+    prevBtnText: t('onboarding.prev'),
+    doneBtnText: t('onboarding.done'),
+    steps
+  })
+
+  tour.drive()
+}
 
 // 三态主题：system | light | dark
+/** Current theme setting (system, light, or dark) */
 const theme = ref<string>(localStorage.getItem('fr-theme') || 'system')
+/** Available brand preset options */
 const BRAND_PRESETS = ['professional', 'soft', 'high-contrast'] as const
+/** Type representing a valid brand preset */
 type BrandPreset = (typeof BRAND_PRESETS)[number]
 
+/**
+ * Parses a string value to determine the brand preset.
+ * @param value - String value from localStorage
+ * @returns Valid BrandPreset or default 'professional'
+ */
 const parseBrandPreset = (value: string | null): BrandPreset => {
   if (value && BRAND_PRESETS.includes(value as BrandPreset)) {
     return value as BrandPreset
@@ -39,7 +178,12 @@ const parseBrandPreset = (value: string | null): BrandPreset => {
 const brandPreset = ref<BrandPreset>(parseBrandPreset(localStorage.getItem('fr-brand-preset')))
 
 // --- 主题逻辑 ---
+/** Media query for detecting system color scheme preference */
 const systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)')
+/**
+ * Handler for system theme changes when in system mode.
+ * @param e - Media query list event
+ */
 const handleSystemThemeChange = (e: MediaQueryListEvent) => {
   if (theme.value === 'system') {
     document.documentElement.classList.toggle('dark', e.matches)
@@ -219,6 +363,21 @@ const addAction = (pluginId: string) => {
 
 const removeAction = (index: number) => {
   workflow.value.splice(index, 1)
+}
+
+const moveAction = ({ from, to }: { from: number; to: number }) => {
+  const length = workflow.value.length
+  if (length <= 1) return
+  if (from < 0 || from >= length) return
+
+  const next = [...workflow.value]
+  const [moved] = next.splice(from, 1)
+  if (!moved) return
+
+  const clampedTo = Math.min(Math.max(0, to), length)
+  const insertIndex = from < clampedTo ? clampedTo - 1 : clampedTo
+  next.splice(insertIndex, 0, moved)
+  workflow.value = next
 }
 
 const appendImportedFiles = (importedFiles: ImportedFile[]) => {
@@ -508,6 +667,10 @@ onMounted(() => {
   }
   applyTheme(theme.value)
   applyBrandPreset(brandPreset.value)
+
+  window.setTimeout(() => {
+    void startOnboarding(false)
+  }, 320)
 })
 
 onUnmounted(() => {
@@ -519,6 +682,7 @@ onUnmounted(() => {
   <div class="app-shell flex flex-col h-screen w-full bg-background text-foreground overflow-hidden font-sans select-none antialiased">
     <!-- 顶部操作栏 -->
     <ControlHeader 
+      id="onboarding-header"
       :file-count="files.length"
       :selected-count="selectedCount"
       @show-settings="isSettingsOpen = true"
@@ -528,21 +692,25 @@ onUnmounted(() => {
       @run="runRenaming"
       @revert-files="revertSelectedFiles"
       @delete-files="deleteSelectedFiles"
+      @start-guide="startOnboarding(true)"
     />
 
     <div class="flex-1 flex overflow-hidden">
       <!-- 左侧工作流（流式中心 UI） -->
       <WorkflowSidebar 
+        id="onboarding-workflow"
         :workflow="workflow"
         :line-style="lineStyle"
         :is-collapsed="isSidebarCollapsed"
         @add-action="addAction"
         @remove-action="removeAction"
+        @move-action="moveAction"
         @toggle-collapse="isSidebarCollapsed = !isSidebarCollapsed"
       />
 
       <!-- 右侧预览区域 -->
       <main
+        id="onboarding-preview"
         :class="[
           'preview-stage flex-1 flex flex-col relative transition-all duration-300',
           isDragOverPreview && 'ring-2 ring-primary/40 ring-inset bg-primary/5',
@@ -602,6 +770,88 @@ body {
 
 .preview-stage {
   background-color: color-mix(in oklab, var(--background) 88%, var(--muted) 12%);
+}
+
+.driver-overlay {
+  background: rgba(15, 23, 42, 0.38) !important;
+}
+
+.driver-popover {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
+}
+
+.driver-popover-title {
+  font-weight: 800;
+  color: var(--popover-foreground);
+}
+
+.driver-popover-description {
+  color: color-mix(in oklab, var(--foreground) 76%, transparent);
+  line-height: 1.45;
+}
+
+.driver-popover-close-btn {
+  color: color-mix(in oklab, var(--foreground) 46%, transparent);
+}
+
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: var(--foreground);
+}
+
+.driver-popover-progress-text {
+  color: color-mix(in oklab, var(--foreground) 62%, transparent);
+}
+
+.driver-popover-footer button {
+  text-shadow: none;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  color: var(--foreground);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.driver-popover-footer button:hover,
+.driver-popover-footer button:focus {
+  background: color-mix(in oklab, var(--accent) 82%, var(--card));
+}
+
+.driver-popover-next-btn {
+  border-color: color-mix(in oklab, var(--primary) 36%, transparent) !important;
+  background: color-mix(in oklab, var(--primary) 90%, white) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-next-btn:focus {
+  background: color-mix(in oklab, var(--primary) 78%, black) !important;
+}
+
+.driver-popover-arrow {
+  border-color: var(--popover);
+}
+
+.dark .driver-overlay {
+  background: rgba(2, 6, 23, 0.68) !important;
+}
+
+.dark .driver-popover {
+  border-color: color-mix(in oklab, var(--border) 84%, transparent);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.48);
+}
+
+.dark .driver-popover-footer button {
+  background: color-mix(in oklab, var(--card) 88%, black);
+  color: var(--foreground);
+}
+
+.dark .driver-popover-next-btn {
+  background: color-mix(in oklab, var(--primary) 82%, black) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

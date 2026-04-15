@@ -1,4 +1,15 @@
 <script setup lang="ts">
+/**
+ * 工具提示组件。
+ * @description 鼠标悬停显示的提示信息，使用Radix Vue的Tooltip原语实现
+ * @param content - 提示内容
+ * @param disabled - 是否禁用
+ * @param side - 弹出位置（top, right, bottom, left）
+ * @param align - 对齐方式（start, center, end）
+ * @param sideOffset - 偏移量
+ * @param delayDuration - 延迟显示时间（毫秒）
+ * @see https://www.radix-vue.com/components/tooltip 官方文档
+ */
 import { computed, type HTMLAttributes } from 'vue'
 import {
   TooltipContent,

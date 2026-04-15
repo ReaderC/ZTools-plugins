@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * 表格头部单元格组件。
+ * @description 表格的th元素，用于列标题
+ * @see FRTable 表格容器组件
+ */
 import type { HTMLAttributes } from 'vue'
 import { cn } from '@/lib/utils'
 
