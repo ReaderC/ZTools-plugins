@@ -63,13 +63,26 @@ function buildCandidate(
   return `${baseName}(${serialString})${ext}`;
 }
 
-/** 用于在工作流中跟踪已见名称的运行时状态 */
-const runState = {
-  /** 当前批处理中已使用的名称集合 */
-  seen: new Set<string>(),
-  /** 跟踪每个原始名称的下一个序列号的Map */
-  nextSerialByOriginal: new Map<string, number>()
+type UniqueifyRunState = {
+  seen: Set<string>;
+  nextSerialByOriginal: Map<string, number>;
 };
+
+function getRunState(context: WorkflowContext): UniqueifyRunState {
+  const stateKey = `uniqueify:${context.actionInstanceId}`;
+  const existing = context.runtime.sharedState.get(stateKey) as UniqueifyRunState | undefined;
+  if (existing) {
+    return existing;
+  }
+
+  const initialState: UniqueifyRunState = {
+    seen: new Set<string>(),
+    nextSerialByOriginal: new Map<string, number>()
+  };
+
+  context.runtime.sharedState.set(stateKey, initialState);
+  return initialState;
+}
 
 /**
  * 用于通过追加序列号确保文件名唯一的插件。
@@ -122,10 +135,7 @@ export const uniqueifyPlugin: PluginActionDefinition = {
    * @returns 如果需要则带后缀的唯一文件名
    */
   apply: (currentName: string, config: any, context: WorkflowContext) => {
-    if (context.index === 0) {
-      runState.seen.clear();
-      runState.nextSerialByOriginal.clear();
-    }
+    const runState = getRunState(context);
 
     const {
       style = 'paren',

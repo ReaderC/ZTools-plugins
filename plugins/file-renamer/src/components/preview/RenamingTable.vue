@@ -127,14 +127,14 @@ function getFileIconTone(ext: string) {
 function getStatusLabel(file: FileItem) {
   if (file.status === 'success') return t('table.status_success')
   if (file.status === 'error') return t('table.status_error')
-  if (file.newName !== file.originalName) return t('table.status_pending')
+  if (file.status === 'modified') return t('table.status_modified')
   return t('table.status_idle')
 }
 
 function getStatusKey(file: FileItem) {
   if (file.status === 'success') return 'success'
   if (file.status === 'error') return 'error'
-  if (file.newName !== file.originalName) return 'pending'
+  if (file.status === 'modified') return 'modified'
   return 'idle'
 }
 
@@ -145,7 +145,7 @@ function getStatusTone(file: FileItem) {
   if (getStatusKey(file) === 'error') {
     return 'bg-destructive/12 text-destructive border-destructive/35'
   }
-  if (getStatusKey(file) === 'pending') {
+  if (getStatusKey(file) === 'modified') {
     return 'bg-info-soft text-info-foreground border-info/35'
   }
   return 'bg-muted text-muted-foreground border-border'
@@ -187,7 +187,7 @@ function getLinkedRowTone(file: FileItem) {
   if (!isSelected(file.id)) return ''
   if (getStatusKey(file) === 'success') return 'bg-success-soft/60 border-l-2 border-l-success'
   if (getStatusKey(file) === 'error') return 'bg-destructive/8 border-l-2 border-l-destructive'
-  if (getStatusKey(file) === 'pending') return 'bg-info-soft/60 border-l-2 border-l-info'
+  if (getStatusKey(file) === 'modified') return 'bg-info-soft/60 border-l-2 border-l-info'
   return 'bg-muted/60 border-l-2 border-l-border'
 }
 
@@ -349,7 +349,7 @@ function canRevert(file: FileItem) {
                   )">
                     <CheckCircle2 v-if="file.status === 'success'" class="h-3.5 w-3.5" />
                     <AlertCircle v-else-if="file.status === 'error'" class="h-3.5 w-3.5" />
-                    <Clock v-else-if="file.newName !== file.originalName" class="h-3.5 w-3.5" />
+                    <Clock v-else-if="file.status === 'modified'" class="h-3.5 w-3.5" />
                     {{ getStatusLabel(file) }}
                   </span>
                 </FRTooltip>

@@ -14,7 +14,10 @@
     "settings": "Settings",
     "metadata": "File Info",
     "no_rules": "Add a rule to start building your flow",
-    "select_rule_desc": "Choose a renaming rule to add it to your workflow"
+    "select_rule_desc": "Choose a renaming rule to add it to your workflow",
+    "rename_conflict_toast": "Detected {count} rename conflicts. Check failed rows in the table.",
+    "rename_failed_toast": "{count} files failed to rename. Check failed rows in the table.",
+    "toast_close": "Close notification"
   },
   "workflow": {
     "add_rule": "Add Renaming Rule",
@@ -288,7 +291,7 @@
     "select_item": "Select Item",
     "batch_tip": "Select files to enable batch actions",
     "selected_count": "{count} selected",
-    "status_pending": "Pending",
+    "status_modified": "Pending",
     "status_success": "Completed",
     "status_error": "Failed",
     "status_idle": "Unchanged",

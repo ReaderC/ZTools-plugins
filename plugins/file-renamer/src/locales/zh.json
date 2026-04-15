@@ -14,7 +14,10 @@
     "settings": "设置",
     "metadata": "属性信息",
     "no_rules": "请点击下方按钮添加处理规则",
-    "select_rule_desc": "选择一个处理规则并将其添加到当前工作流中"
+    "select_rule_desc": "选择一个处理规则并将其添加到当前工作流中",
+    "rename_conflict_toast": "检测到 {count} 个重命名冲突，请查看表格中的失败项。",
+    "rename_failed_toast": "有 {count} 个文件重命名失败，请查看表格中的失败项。",
+    "toast_close": "关闭提示"
   },
   "workflow": {
     "add_rule": "添加重命名规则",
@@ -288,7 +291,7 @@
     "select_item": "选择该项",
     "batch_tip": "选择文件后可进行批量操作",
     "selected_count": "已选择 {count} 项",
-    "status_pending": "待处理",
+    "status_modified": "待处理",
     "status_success": "已完成",
     "status_error": "失败",
     "status_idle": "未变更",

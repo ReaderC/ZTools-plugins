@@ -116,7 +116,7 @@ function appendTemplateToken(fieldKey: unknown, token: string) {
               {{ index + 1 }}
             </div>
             <FRTooltip :content="getPluginName(plugin)" :disabled="!plugin">
-              <h3 class="font-bold text-[11px] uppercase tracking-wider text-foreground truncate max-w-[160px]">{{
+              <h3 class="font-bold text-[11px] uppercase tracking-wider text-foreground truncate max-w-40">{{
                 getPluginName(plugin) }}</h3>
             </FRTooltip>
           </div>

@@ -22,11 +22,22 @@ export interface FileItem {
   /** 此项目是否为目录而非文件 */
   isDirectory: boolean;
   /** 重命名操作的当前状态 */
-  status: 'pending' | 'success' | 'error' | 'warning';
+  status: 'idle' | 'modified' | 'success' | 'error';
   /** 如果状态为'error'，则包含错误消息 */
   errorMessage?: string;
   /** 文件扩展名，包含点号（例如'.txt'） */
   extension: string;
+}
+
+/**
+ * 表示单次工作流运行期间的共享运行态。
+ * 用于在同一批处理中为插件提供稳定的共享上下文。
+ */
+export interface WorkflowRuntimeContext {
+  /** 插件共享状态容器，键通常由插件ID和实例ID组成 */
+  sharedState: Map<string, unknown>;
+  /** 当前批处理固定时间戳（毫秒） */
+  batchTimestamp: number;
 }
 
 /**
@@ -40,6 +51,10 @@ export interface WorkflowContext {
   total: number;
   /** 正在处理的完整FileItem */
   file: FileItem;
+  /** 当前处理的插件实例ID */
+  actionInstanceId: string;
+  /** 单次工作流运行期间的共享运行态 */
+  runtime: WorkflowRuntimeContext;
 }
 
 /**

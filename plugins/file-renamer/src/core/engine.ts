@@ -1,4 +1,4 @@
-import type { FileItem, ActionInstance, WorkflowContext } from './types';
+import type { FileItem, ActionInstance, WorkflowContext, WorkflowRuntimeContext } from './types';
 import { registry } from './registry';
 
 /**
@@ -12,6 +12,11 @@ export function applyWorkflow(
   files: FileItem[],
   workflow: ActionInstance[]
 ): FileItem[] {
+  const runtime: WorkflowRuntimeContext = {
+    sharedState: new Map<string, unknown>(),
+    batchTimestamp: Date.now()
+  };
+
   return files.map((file, index) => {
     let currentNewName = file.originalName;
     const total = files.length;
@@ -31,7 +36,9 @@ export function applyWorkflow(
       const context: WorkflowContext = {
         index,
         total,
-        file
+        file,
+        actionInstanceId: instance.instanceId,
+        runtime
       };
 
       try {
@@ -46,8 +53,8 @@ export function applyWorkflow(
     const status = errorMessage
       ? 'error'
       : currentNewName === file.originalName
-        ? 'pending'
-        : 'warning';
+        ? 'idle'
+        : 'modified';
 
     return {
       ...file,

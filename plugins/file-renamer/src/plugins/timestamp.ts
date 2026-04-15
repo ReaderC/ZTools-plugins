@@ -39,7 +39,9 @@ export const timestampPlugin: PluginActionDefinition = {
    */
   apply: (currentName: string, config: any, context: WorkflowContext) => {
     const { format = 'YYYY-MM-DD', useCurrentTime = false } = config;
-    const date = useCurrentTime ? new Date() : new Date(context.file.lastModified);
+    const date = useCurrentTime
+      ? new Date(context.runtime.batchTimestamp)
+      : new Date(context.file.lastModified);
     
     const lastDot = currentName.lastIndexOf('.');
     const ext = lastDot === -1 ? '' : currentName.substring(lastDot);

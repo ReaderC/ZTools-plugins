@@ -39,10 +39,63 @@ const selectedIds = ref<string[]>([])
 const isDragOverPreview = ref(false)
 /** Current depth during drag operations (for nested folder handling) */
 const dragDepth = ref(0)
+
+type ToastTone = 'error' | 'warning' | 'info' | 'success'
+
+type AppToast = {
+  id: number
+  message: string
+  tone: ToastTone
+}
+
+const activeToast = ref<AppToast | null>(null)
+let toastTimer: number | undefined
 /** Internationalization helper */
 const { t } = useI18n()
 /** Local storage key for tracking onboarding completion */
 const ONBOARDING_STORAGE_KEY = 'fr-onboarding-completed-v1'
+
+const clearToastTimer = () => {
+  if (toastTimer !== undefined) {
+    window.clearTimeout(toastTimer)
+    toastTimer = undefined
+  }
+}
+
+const showToast = (message: string, tone: ToastTone = 'warning') => {
+  clearToastTimer()
+  activeToast.value = {
+    id: Date.now(),
+    message,
+    tone
+  }
+
+  toastTimer = window.setTimeout(() => {
+    activeToast.value = null
+    toastTimer = undefined
+  }, 3600)
+}
+
+const dismissToast = () => {
+  clearToastTimer()
+  activeToast.value = null
+}
+
+const getToastToneClass = (tone: ToastTone) => {
+  if (tone === 'error') {
+    return 'border-destructive/40 bg-destructive/12 text-destructive'
+  }
+
+  if (tone === 'success') {
+    return 'border-success/40 bg-success-soft text-success-foreground'
+  }
+
+  if (tone === 'info') {
+    return 'border-info/40 bg-info-soft text-info-foreground'
+  }
+
+  return 'border-warning/40 bg-warning-soft text-warning-foreground'
+}
 
 /**
  * Checks if the user has completed the onboarding tutorial.
@@ -342,7 +395,33 @@ const validateNewName = (name: string): string | null => {
 
 // --- 实时预览计算 ---
 const previewFiles = computed(() => {
-  return applyWorkflow(files.value, workflow.value)
+  const workflowPreview = applyWorkflow(files.value, workflow.value)
+  const sourceById = new Map(files.value.map((file) => [file.id, file]))
+
+  return workflowPreview.map((previewFile) => {
+    const sourceFile = sourceById.get(previewFile.id)
+    if (!sourceFile) {
+      return previewFile
+    }
+
+    if (sourceFile.status === 'error') {
+      return {
+        ...previewFile,
+        status: 'error' as const,
+        errorMessage: sourceFile.errorMessage
+      }
+    }
+
+    if (sourceFile.status === 'success') {
+      return {
+        ...previewFile,
+        status: 'success' as const,
+        errorMessage: undefined
+      }
+    }
+
+    return previewFile
+  })
 })
 
 // --- 操作方法 ---
@@ -397,7 +476,7 @@ const appendImportedFiles = (importedFiles: ImportedFile[]) => {
       size: f.size,
       lastModified: f.lastModified,
       isDirectory: false,
-      status: hasAbsolutePath ? 'pending' : 'error',
+      status: hasAbsolutePath ? 'idle' : 'error',
       errorMessage: hasAbsolutePath ? undefined : '无法获取文件绝对路径，请使用“导入文件”按钮选择本地文件',
       extension: f.name.split('.').pop() || ''
     }
@@ -433,7 +512,7 @@ const handleImportPaths = async (filePaths: string[]) => {
       size: stats.size,
       lastModified: stats.mtimeMs,
       isDirectory: false,
-      status: 'pending',
+      status: 'idle',
       extension: fileName.split('.').pop() || ''
     }
   }))
@@ -548,7 +627,7 @@ const revertFile = async (fileId: string) => {
   }
 
   file.newName = file.originalName
-  file.status = 'pending'
+  file.status = 'idle'
   file.errorMessage = undefined
 }
 
@@ -562,7 +641,7 @@ const revertFiles = async (fileIds: string[]) => {
         await revertCommittedRename(file)
       } else {
         file.newName = file.originalName
-        file.status = 'pending'
+        file.status = 'idle'
         file.errorMessage = undefined
       }
     }
@@ -604,11 +683,14 @@ const runRenaming = async () => {
 
   const pathSet = new Set<string>()
   const validPlans: typeof plans = []
+  let conflictCount = 0
+  let otherErrorCount = 0
 
   for (const plan of plans) {
     if (!isAbsoluteFilePath(plan.source.path)) {
       plan.source.status = 'error'
       plan.source.errorMessage = '源文件路径无效，请重新导入文件'
+      otherErrorCount += 1
       continue
     }
 
@@ -616,6 +698,7 @@ const runRenaming = async () => {
     if (!sourceExists) {
       plan.source.status = 'error'
       plan.source.errorMessage = '源文件不存在，请重新导入文件'
+      otherErrorCount += 1
       continue
     }
 
@@ -623,6 +706,7 @@ const runRenaming = async () => {
     if (validationError) {
       plan.source.status = 'error'
       plan.source.errorMessage = validationError
+      otherErrorCount += 1
       continue
     }
 
@@ -630,7 +714,19 @@ const runRenaming = async () => {
     if (pathSet.has(normalizedTargetPath)) {
       plan.source.status = 'error'
       plan.source.errorMessage = '存在重复的目标文件名'
+      conflictCount += 1
       continue
+    }
+
+    const normalizedSourcePath = plan.source.path.toLowerCase()
+    if (normalizedTargetPath !== normalizedSourcePath) {
+      const targetExists = await fsBridge.exists(plan.targetPath)
+      if (targetExists) {
+        plan.source.status = 'error'
+        plan.source.errorMessage = '目标文件已存在，已阻止覆盖'
+        conflictCount += 1
+        continue
+      }
     }
 
     pathSet.add(normalizedTargetPath)
@@ -638,11 +734,23 @@ const runRenaming = async () => {
   }
 
   for (const plan of validPlans) {
-    plan.source.status = 'pending'
+    plan.source.status = 'modified'
     plan.source.errorMessage = undefined
 
     const previousPath = plan.source.path
     const previousName = plan.source.originalName
+
+    const normalizedSourcePath = plan.source.path.toLowerCase()
+    const normalizedTargetPath = plan.targetPath.toLowerCase()
+    if (normalizedTargetPath !== normalizedSourcePath) {
+      const targetExists = await fsBridge.exists(plan.targetPath)
+      if (targetExists) {
+        plan.source.status = 'error'
+        plan.source.errorMessage = '目标文件已存在，已阻止覆盖'
+        conflictCount += 1
+        continue
+      }
+    }
 
     const result = await fsBridge.rename(plan.source.path, plan.targetPath)
     if (result.success) {
@@ -657,7 +765,17 @@ const runRenaming = async () => {
     } else {
       plan.source.status = 'error'
       plan.source.errorMessage = result.error
+      otherErrorCount += 1
     }
+  }
+
+  if (conflictCount > 0) {
+    showToast(t('app.rename_conflict_toast', { count: conflictCount }), 'error')
+    return
+  }
+
+  if (otherErrorCount > 0) {
+    showToast(t('app.rename_failed_toast', { count: otherErrorCount }), 'error')
   }
 }
 
@@ -674,6 +792,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearToastTimer()
   systemThemeMedia.removeEventListener('change', handleSystemThemeChange)
 })
 </script>
@@ -739,6 +858,29 @@ onUnmounted(() => {
       v-model:theme="theme"
       v-model:brand-preset="brandPreset"
     />
+
+    <Transition name="fr-toast">
+      <div
+        v-if="activeToast"
+        :key="activeToast.id"
+        role="status"
+        aria-live="polite"
+        :class="[
+          'pointer-events-auto fixed right-4 bottom-4 z-120 flex max-w-sm items-center gap-3 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-lg',
+          getToastToneClass(activeToast.tone)
+        ]"
+      >
+        <p class="text-sm font-semibold tracking-tight">{{ activeToast.message }}</p>
+        <button
+          type="button"
+          class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-current/30 text-current/80 transition-colors hover:bg-black/10 hover:text-current"
+          @click="dismissToast"
+          :aria-label="t('app.toast_close')"
+        >
+          ×
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -854,9 +996,25 @@ body {
   background: color-mix(in oklab, var(--primary) 82%, black) !important;
 }
 
+.fr-toast-enter-active,
+.fr-toast-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.fr-toast-enter-from,
+.fr-toast-leave-to {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-shell {
     background-image: none;
+  }
+
+  .fr-toast-enter-active,
+  .fr-toast-leave-active {
+    transition: none;
   }
 }
 </style>
