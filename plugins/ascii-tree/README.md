@@ -25,7 +25,7 @@ pnpm run build
 - `index.js`
 - `plugin.json`
 - `preload.js`
-- `logo.png`
+- `logo.jpg`
 
 清理构建产物：
 
