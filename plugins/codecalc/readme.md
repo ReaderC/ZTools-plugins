@@ -3,6 +3,10 @@
 
 一个支持代码风格计算的 ZTools / 浏览器双端插件。
 
+
+自Utools插件CodeCalc修改而来, 原项目地址: https://github.com/epleone/CodeCalc
+
+
 ![](images/img1.png)
 
 ## Web端编译使用方法
