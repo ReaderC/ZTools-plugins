@@ -11,24 +11,29 @@ const results = ref<number[]>([])
 function generate() {
   const res: number[] = []
   for (let i = 0; i < Math.min(count.value, 100); i++) {
-    const val = Math.random() * (max.value - min.value) + min.value
-    res.push(decimalPlaces.value > 0 ? parseFloat(val.toFixed(decimalPlaces.value)) : Math.floor(val))
+    const val = decimalPlaces.value > 0
+      ? parseFloat((Math.random() * (max.value - min.value) + min.value).toFixed(decimalPlaces.value))
+      : Math.floor(Math.random() * (max.value - min.value + 1)) + min.value
+    res.push(val)
   }
   results.value = res
 }
 
 function copyText(text: string) {
-  if ((window as any).ztools?.copyText) {
-    (window as any).ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success({ message: '已复制到剪贴板', duration: 800 })
+  const doCopy = (window as any).ztools?.copyText
+    ? Promise.resolve((window as any).ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 </script>
 
 <template>
   <div class="random-number">
+    <h2>随机数字</h2>
+    <p class="desc">在指定范围内随机生成整数或小数，支持批量和自定义小数位数</p>
+
     <div class="config">
       <div class="config-row">
         <span>最小值</span>
@@ -67,6 +72,18 @@ function copyText(text: string) {
   padding: 12px;
   max-width: 500px;
   margin: 0 auto;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.desc {
+  color: #909399;
+  margin: 0 0 16px;
   font-size: 13px;
 }
 
@@ -127,6 +144,14 @@ function copyText(text: string) {
   .result-item:hover {
     background: #363640;
     border-color: #667eea;
+  }
+
+  h2 {
+    color: #e0e0e0;
+  }
+
+  .desc {
+    color: #8a8a8a;
   }
 }
 </style>

@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
 import { categories, type Tool } from './tools'
 
 const props = defineProps<{
@@ -48,6 +47,7 @@ function isActive(tool: Tool): boolean {
 .sidebar {
   width: 150px;
   flex-shrink: 0;
+  height: 100%;
   background: var(--sidebar-bg, #f7f8fa);
   border-right: 1px solid var(--border-color, #e5e5e5);
   overflow-y: auto;

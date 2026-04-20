@@ -22,12 +22,12 @@ function generate() {
 }
 
 function copyText(text: string) {
-  if ((window as any).ztools?.copyText) {
-    (window as any).ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success({ message: '已复制到剪贴板', duration: 800 })
+  const doCopy = (window as any).ztools?.copyText
+    ? Promise.resolve((window as any).ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 
 onMounted(() => generate())
@@ -35,6 +35,9 @@ onMounted(() => generate())
 
 <template>
   <div class="uuid-tool">
+    <h2>UUID 生成</h2>
+    <p class="desc">随机生成符合 v4 规范的 UUID，支持批量生成和一键复制</p>
+
     <div class="toolbar">
       <div class="toolbar-left">
         <el-input-number v-model="count" :min="1" :max="20" size="small" />
@@ -64,6 +67,18 @@ onMounted(() => generate())
   padding: 12px;
   max-width: 550px;
   margin: 0 auto;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.desc {
+  color: #909399;
+  margin: 0 0 16px;
   font-size: 13px;
 }
 
@@ -135,6 +150,14 @@ onMounted(() => generate())
 
   .uuid-text {
     color: #ddd;
+  }
+
+  h2 {
+    color: #e0e0e0;
+  }
+
+  .desc {
+    color: #8a8a8a;
   }
 }
 </style>

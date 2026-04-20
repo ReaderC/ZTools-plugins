@@ -5,6 +5,7 @@ import RandomNumber from '../tools/RandomNumber/index.vue'
 import UUID from '../tools/UUID/index.vue'
 import RandomColor from '../tools/RandomColor/index.vue'
 import Signature from '../tools/Signature/index.vue'
+import Pinyin from '../tools/Pinyin/index.vue'
 
 export interface Tool {
   code: string
@@ -36,6 +37,13 @@ export const categories: Category[] = [
     code: 'crypto',
     tools: [
       { code: 'signature', explain: '加密签名', icon: '', component: Signature },
+    ]
+  },
+  {
+    name: '文本',
+    code: 'text',
+    tools: [
+      { code: 'pinyin', explain: '中文转拼音命名', icon: '', component: Pinyin },
     ]
   }
 ]

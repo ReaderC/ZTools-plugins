@@ -31,12 +31,12 @@ function generate() {
 }
 
 function copyText(text: string) {
-  if ((window as any).ztools?.copyText) {
-    (window as any).ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success({ message: '已复制到剪贴板', duration: 800 })
+  const doCopy = (window as any).ztools?.copyText
+    ? Promise.resolve((window as any).ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 
 function getStrength(): { label: string; type: 'danger' | 'warning' | 'success' } {
@@ -54,6 +54,9 @@ function getStrength(): { label: string; type: 'danger' | 'warning' | 'success' 
 
 <template>
   <div class="random-password">
+    <h2>随机密码</h2>
+    <p class="desc">随机生成安全密码，可配置长度、字符集，实时显示密码强度</p>
+
     <div class="config">
       <div class="config-row">
         <span>密码长度</span>
@@ -85,6 +88,18 @@ function getStrength(): { label: string; type: 'danger' | 'warning' | 'success' 
   padding: 12px;
   max-width: 500px;
   margin: 0 auto;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.desc {
+  color: #909399;
+  margin: 0 0 16px;
   font-size: 13px;
 }
 
@@ -153,6 +168,14 @@ function getStrength(): { label: string; type: 'danger' | 'warning' | 'success' 
 
   .result-value:hover {
     color: #8ba4f7;
+  }
+
+  h2 {
+    color: #e0e0e0;
+  }
+
+  .desc {
+    color: #8a8a8a;
   }
 }
 </style>

@@ -81,7 +81,7 @@ onMounted(async () => {
   <!-- 开发模式提示 -->
   <div v-else-if="!route && isDev" class="dev-hint">
     <p>开发模式：请在 ZTools 中使用插件</p>
-    <p>或者访问 <a href="/?code=identity">/?code=identity</a> 测试</p>
+    <p>或者访问 <a href="/?code=identity" @click.prevent="setRoute()">/?code=identity</a> 测试</p>
   </div>
 </template>
 

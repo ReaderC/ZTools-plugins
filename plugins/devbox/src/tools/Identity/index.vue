@@ -48,12 +48,12 @@ const identities = ref<IdentityInfo[]>([])
 const count = ref(1)
 
 function copyText(text: string) {
-  if ((window as any).ztools?.copyText) {
-    (window as any).ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success({ message: '已复制到剪贴板', duration: 800 })
+  const doCopy = (window as any).ztools?.copyText
+    ? Promise.resolve((window as any).ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 
 // ====== 工具函数 ======
@@ -72,7 +72,7 @@ function generateOne(): IdentityInfo {
   for (let i = 0; i < nameLen; i++) {
     name += pick(nameChars)
   }
-  const fullName = surname + name.charAt(0)
+  const fullName = surname + name
 
   const gender: string = Math.random() > 0.5 ? '男' : '女'
   const age = randInt(18, 60)
@@ -94,7 +94,7 @@ function generateOne(): IdentityInfo {
   const id17 = pc + areaCode + String(birthYear) + monthCode + dayCode + seq
   const idCard = id17 + String(randInt(0, 9))
 
-  const fakePhonePrefixes = ['190', '191', '192', '193', '194', '196', '199']
+  const fakePhonePrefixes = ['190', '191', '192', '193', '194', '195', '196', '199']
   const phone = pick(fakePhonePrefixes) + String(randInt(0, 99999999)).padStart(8, '0')
 
   const address = `${pick(provinces)}${randInt(1, 9)}号${pick(streets)}${randInt(1, 200)}号${randInt(101, 300)}室`
@@ -189,7 +189,7 @@ function exportCSV() {
   const rows = identities.value.map(i =>
     [i.name, i.gender, i.age, i.height, i.weight, i.bloodType, i.education, i.maritalStatus,
       i.idCard, i.phone, i.bankCard, i.address, i.company, i.job, i.qq, i.email]
-      .map(v => `"${v}"`).join(',')
+      .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
   )
   const csv = '\uFEFF' + [headers, ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
@@ -237,6 +237,9 @@ onMounted(() => { generate() })
 
 <template>
   <div class="identity">
+    <h2>随机身份</h2>
+    <p class="desc">随机生成虚拟身份信息（姓名、身份证号、手机号、地址等），支持批量和导出</p>
+
     <el-alert
       title="免责声明：以下所有信息均为随机生成的虚拟数据，仅用于软件测试等合法用途，请勿用于伪造身份、欺诈等任何违法行为。"
       type="warning"
@@ -285,6 +288,18 @@ onMounted(() => { generate() })
   padding: 12px;
   max-width: 700px;
   margin: 0 auto;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.desc {
+  color: #909399;
+  margin: 0 0 16px;
   font-size: 13px;
 }
 
@@ -391,6 +406,14 @@ onMounted(() => { generate() })
 
   .field-value {
     color: #ddd;
+  }
+
+  h2 {
+    color: #e0e0e0;
+  }
+
+  .desc {
+    color: #8a8a8a;
   }
 }
 </style>

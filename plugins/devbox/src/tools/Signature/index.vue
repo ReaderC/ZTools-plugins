@@ -256,6 +256,10 @@ function bufToBase64(buf: ArrayBuffer): string {
 }
 
 async function generate() {
+  if (isHmac.value && !hmacKey.value.trim()) {
+    ElMessage.warning('HMAC 算法需要输入密钥')
+    return
+  }
   const raw = buildRawString()
   rawString.value = raw
   loading.value = true
@@ -290,12 +294,12 @@ async function generate() {
 }
 
 function copyText(text: string) {
-  if (window.ztools?.copyText) {
-    window.ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success('已复制到剪贴板')
+  const doCopy = window.ztools?.copyText
+    ? Promise.resolve(window.ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 </script>
 

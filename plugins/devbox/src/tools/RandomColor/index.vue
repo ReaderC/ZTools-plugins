@@ -39,12 +39,12 @@ function applyColor() {
 }
 
 function copyText(text: string) {
-  if ((window as any).ztools?.copyText) {
-    (window as any).ztools.copyText(text)
-  } else {
-    navigator.clipboard.writeText(text)
-  }
-  ElMessage.success({ message: '已复制到剪贴板', duration: 800 })
+  const doCopy = (window as any).ztools?.copyText
+    ? Promise.resolve((window as any).ztools.copyText(text))
+    : navigator.clipboard.writeText(text)
+  doCopy
+    .then(() => ElMessage.success({ message: '已复制到剪贴板', duration: 800 }))
+    .catch(() => ElMessage.error({ message: '复制失败', duration: 1000 }))
 }
 
 function copyAs(format: 'hex' | 'rgb' | 'hsl') {
@@ -59,6 +59,9 @@ function copyAs(format: 'hex' | 'rgb' | 'hsl') {
 
 <template>
   <div class="random-color">
+    <h2>随机颜色</h2>
+    <p class="desc">通过 HSL 滑块调色或随机生成颜色，支持 HEX/RGB/HSL 多格式复制</p>
+
     <div class="preview" :style="{ background: color }">
       <span v-if="color" class="preview-hex">{{ color }}</span>
       <span v-else class="preview-placeholder">点击生成</span>
@@ -107,6 +110,18 @@ function copyAs(format: 'hex' | 'rgb' | 'hsl') {
   padding: 12px;
   max-width: 400px;
   margin: 0 auto;
+  font-size: 13px;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.desc {
+  color: #909399;
+  margin: 0 0 16px;
   font-size: 13px;
 }
 
@@ -191,6 +206,14 @@ function copyAs(format: 'hex' | 'rgb' | 'hsl') {
 @media (prefers-color-scheme: dark) {
   .history-item {
     border-color: #555;
+  }
+
+  h2 {
+    color: #e0e0e0;
+  }
+
+  .desc {
+    color: #8a8a8a;
   }
 }
 </style>
