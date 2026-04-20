@@ -24,8 +24,10 @@ function generate() {
     return
   }
   let pw = ''
+  const array = new Uint32Array(length.value)
+  crypto.getRandomValues(array)
   for (let i = 0; i < length.value; i++) {
-    pw += chars[Math.floor(Math.random() * chars.length)]
+    pw += chars[array[i] % chars.length]
   }
   result.value = pw
 }
