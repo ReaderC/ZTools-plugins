@@ -1,6 +1,13 @@
 import resolve from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import commonjs from '@rollup/plugin-commonjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const coreDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(coreDir, '..');
+const appDir = path.join(rootDir, 'app');
+const testDir = path.join(rootDir, 'test');
 
 const sharedPlugins = [
   resolve({
@@ -12,21 +19,21 @@ const sharedPlugins = [
 
 export default [
   {
-    input: 'calculator.js',
+    input: path.join(coreDir, 'calculator.js'),
     output: [
       {
-        file: '../app/src/calculator.min.js',
+        file: path.join(appDir, 'src', 'calculator.min.js'),
         format: 'iife',
         name: 'CodeCalcCore',
         sourcemap: false
       },
       {
-        file: '../test/calculator.min.mjs',
+        file: path.join(testDir, 'calculator.min.mjs'),
         format: 'es',
         sourcemap: false
       },
       {
-        file: '../test/calculator.min.js',
+        file: path.join(testDir, 'calculator.min.js'),
         format: 'iife',
         name: 'CodeCalcCore',
         sourcemap: false
@@ -35,9 +42,9 @@ export default [
     plugins: sharedPlugins
   },
   {
-    input: '../app/src/index.js',
+    input: path.join(appDir, 'src', 'index.js'),
     output: {
-      file: '../app/src/app.bundle.js',
+      file: path.join(appDir, 'src', 'app.bundle.js'),
       format: 'iife',
       name: 'CodeCalcApp',
       sourcemap: false

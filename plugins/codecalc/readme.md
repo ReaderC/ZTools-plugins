@@ -12,13 +12,13 @@
 ## Web端编译使用方法
 
 ```bash
-cd core
 # npm/pnpm安装依赖
 pnpm install
-# npm/pnpm构建项目, 在../app/src下生成app.bundle.js和calculator.min.js
-pnpm build
-# 在app下直接访问index.html即可使用
-cd ../app
+# npm/pnpm构建项目, 在app/src下生成app.bundle.js和calculator.min.js
+# 同时会把app目录完整复制到根目录dist
+pnpm run build
+# 在app或dist下直接访问index.html即可使用
+cd app
 ```
 
 ## 主要功能
