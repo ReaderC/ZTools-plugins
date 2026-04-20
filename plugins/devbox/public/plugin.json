@@ -1,9 +1,9 @@
 {
   "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
-  "name": "myplugins",
+  "name": "devbox",
   "title": "开发百宝箱",
-  "description": "随机信息生成工具箱，包含随机身份、密码、数字、UUID、颜色、加密签名等实用工具",
-  "author": "ZH",
+  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音等实用工具",
+  "author": "CafeBabe",
   "version": "2.1.0",
   "main": "index.html",
   "preload": "preload/services.js",
@@ -47,6 +47,12 @@
       "explain": "将参数按规则拼接后生成加密签名，支持 SHA/MD5/HMAC 等多种算法",
       "icon": "logo.png",
       "cmds": ["加密", "签名", "token", "signature", "hash", "加密签名", "哈希", "签名生成", "md5", "sha", "hmac"]
+    },
+    {
+      "code": "pinyin",
+      "explain": "将中文转换为拼音命名格式，支持全拼、驼峰、下划线、常量、首字母等多种格式",
+      "icon": "logo.png",
+      "cmds": ["拼音", "pinyin", "中文转拼音", "命名", "驼峰", "下划线命名", "首字母"]
     }
   ]
 }
