@@ -22,6 +22,7 @@ export default function Offset({ enterAction }: { enterAction?: any }) {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<{ sql?: string; modifiedCount: number; skippedCount: number; warnings: string[] } | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
 
   function addRule() {
     setRules((r) => [...r, { id: ++uid, column: '', offset: 1000000 }])
@@ -53,7 +54,7 @@ export default function Offset({ enterAction }: { enterAction?: any }) {
         (pct) => setProgress(pct)
       )
       setResult(res)
-      if (isLarge) window.ztools.showNotification('处理完成，已保存')
+      if (isLarge && outputPath) { setSavedPath(outputPath); window.ztools.showNotification('处理完成，已保存') }
     } catch (err: any) {
       window.ztools.showNotification(`处理失败: ${err.message || err}`)
     } finally {
@@ -104,6 +105,8 @@ export default function Offset({ enterAction }: { enterAction?: any }) {
         <div>
           <p className="success">处理完成！修改 {result.modifiedCount} 行，跳过 {result.skippedCount} 行</p>
           {result.warnings.map((w, i) => <p key={i} className="error">{w}</p>)}
+          {savedPath && <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+            onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>在文件管理器中显示</button>}
         </div>
       )}
     </PageLayout>

@@ -201,7 +201,7 @@ declare global {
     sqlToCsv(
       inputSql: string,
       outputPath: string,
-      options?: { onProgress?: (info: { bytesRead: number; totalBytes: number; pct: number }) => void }
+      options?: { onProgress?: (info: { bytesRead: number; totalBytes: number; pct: number; rowCount?: number }) => void }
     ): Promise<{ tableCount: number; rowCount: number; files: string[] }>
 
     // SQL → xlsx
@@ -209,7 +209,7 @@ declare global {
       inputSql: string,
       outputPath: string,
       options?: { onProgress?: (info: { bytesRead: number; totalBytes: number; pct: number }) => void }
-    ): Promise<{ tableCount: number; rowCount: number }>
+    ): Promise<{ tableCount: number; sheetCount: number; rowCount: number }>
 
     // CSV → SQL
     csvToSql(

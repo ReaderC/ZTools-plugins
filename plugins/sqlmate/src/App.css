@@ -23,24 +23,6 @@
   display: none;
 }
 
-.app-nav__logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #4f7ef8, #7c5af8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 10px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(79, 126, 248, 0.35);
-}
-
-.app-nav__logo-text {
-  color: #fff;
-  font-weight: 700;
-  font-size: 15px;
-}
 
 .app-nav__group {
   width: 100%;

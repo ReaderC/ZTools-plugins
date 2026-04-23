@@ -77,9 +77,6 @@ export default function App() {
     <div className="app-layout">
       {/* 侧边导航 */}
       <nav className="app-nav">
-        <div className="app-nav__logo">
-          <span className="app-nav__logo-text">S</span>
-        </div>
         {GROUPS.map((group) => (
           <div key={group} className="app-nav__group">
             <div className="app-nav__group-label">{group}</div>

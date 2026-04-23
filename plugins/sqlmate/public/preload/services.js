@@ -8,7 +8,7 @@ const os       = require('node:os')
 const readline = require('node:readline')
 
 // ── SQL ↔ CSV/Excel 转换库 ────────────────────────────────────────────────────
-const { sqlToCsv, sqlToXlsx, csvToSql, xlsxToSql } = require('./lib/convert')
+const { sqlToCsv, sqlToCsvStream, sqlToXlsx, csvToSql, xlsxToSql } = require('./lib/convert')
 
 // ── 小文件纯函数库 ────────────────────────────────────────────────────────────
 const { mergeSQL }          = require('./lib/merge')
@@ -407,18 +407,22 @@ window.services = {
   // ── SQL → CSV / xlsx ──────────────────────────────────────────────────────────
 
   /**
-   * SQL INSERT → CSV 文件（async，支持真实字节进度）
+   * SQL INSERT → CSV 文件（async，大文件流式 O(1) 内存，小文件内存处理）
    * 单表写到 outputPath（.csv），多表写到 outputPath 目录（每表一个 .csv）
    *
    * @param {string} inputSql      SQL 字符串 或 文件路径
    * @param {string} outputPath    输出文件或目录路径
-   * @param {{ onProgress?: (info: { bytesRead: number, totalBytes: number, pct: number }) => void }} [options]
+   * @param {{ onProgress?: (info: { bytesRead: number, totalBytes: number, pct: number, rowCount: number }) => void }} [options]
    * @returns {Promise<{ tableCount, rowCount, files: string[] }>}
    */
   async sqlToCsv(inputSql, outputPath, options = {}) {
     const { onProgress } = options
-    const sql = await this._readFileWithProgress(inputSql, onProgress)
-    return sqlToCsv(sql, outputPath)
+    // 文件输入：直接流式处理，不读入内存，支持 GB 级文件
+    if (fs.existsSync(inputSql)) {
+      return sqlToCsvStream(inputSql, outputPath, { onProgress })
+    }
+    // 字符串输入（粘贴的小 SQL）：走内存版
+    return sqlToCsv(inputSql, outputPath)
   },
 
   /**
@@ -447,8 +451,10 @@ window.services = {
 
     const totalBytes = fs.statSync(input).size
     let bytesRead = 0
-    let lastPct = -1
     const chunks = []
+    // 按时间间隔触发，避免百分比跳变和过度让出
+    let lastNotifyTime = Date.now()
+    const NOTIFY_INTERVAL_MS = 80
 
     const rl = readline.createInterface({
       input: fs.createReadStream(input, { encoding: 'utf8' }),
@@ -458,10 +464,11 @@ window.services = {
     for await (const line of rl) {
       chunks.push(line)
       bytesRead += Buffer.byteLength(line, 'utf8') + 1
-      const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
-      if (pct > lastPct) {
+      const now = Date.now()
+      if (now - lastNotifyTime >= NOTIFY_INTERVAL_MS) {
+        const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
         onProgress({ bytesRead, totalBytes, pct })
-        lastPct = pct
+        lastNotifyTime = now
         // 让出事件循环，React 可重渲染进度条
         await new Promise((resolve) => setTimeout(resolve, 0))
       }

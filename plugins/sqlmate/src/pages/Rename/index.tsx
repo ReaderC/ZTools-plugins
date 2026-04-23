@@ -23,6 +23,7 @@ export default function Rename({ enterAction }: { enterAction?: any }) {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<{ sql?: string; replacedCount: number } | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
 
   function addRule() {
     setRules((r) => [...r, { id: ++uid, type: 'table', from: '', to: '' }])
@@ -54,7 +55,7 @@ export default function Rename({ enterAction }: { enterAction?: any }) {
         (pct) => setProgress(pct)
       )
       setResult(res)
-      if (isLarge) window.ztools.showNotification('处理完成，已保存')
+      if (isLarge && outputPath) { setSavedPath(outputPath); window.ztools.showNotification('处理完成，已保存') }
     } catch (err: any) {
       window.ztools.showNotification(`处理失败: ${err.message || err}`)
     } finally {
@@ -100,7 +101,11 @@ export default function Rename({ enterAction }: { enterAction?: any }) {
           meta={<span>已替换 <b>{result.replacedCount}</b> 行</span>} />
       )}
       {result && isLarge && (
-        <p className="success">处理完成！共替换 {result.replacedCount} 行</p>
+        <div>
+          <p className="success">处理完成！共替换 {result.replacedCount} 行</p>
+          {savedPath && <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+            onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>在文件管理器中显示</button>}
+        </div>
       )}
     </PageLayout>
   )

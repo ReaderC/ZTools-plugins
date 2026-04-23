@@ -17,6 +17,7 @@ export default function Extract({ enterAction }: { enterAction?: any }) {
   const [extracting, setExtracting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<{ sql?: string; count: number } | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleScan = async () => {
@@ -65,7 +66,10 @@ export default function Extract({ enterAction }: { enterAction?: any }) {
         setProgress
       )
       setResult(res)
-      if (isLarge) window.ztools.showNotification('抽取完成，文件已保存')
+      if (isLarge && outputPath) {
+        setSavedPath(outputPath)
+        window.ztools.showNotification('抽取完成，文件已保存')
+      }
     } catch (err: any) {
       const msg = err?.message || String(err)
       setError(`抽取失败: ${msg}`)
@@ -144,6 +148,12 @@ export default function Extract({ enterAction }: { enterAction?: any }) {
       {result && (
         <div className="section" style={{ marginTop: 16 }}>
           <div className="success">抽取完成！共抽取 {result.count} 条语句。</div>
+          {savedPath && (
+            <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+              onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>
+              在文件管理器中显示
+            </button>
+          )}
           {result.sql && (
             <ResultPanel
               content={result.sql}

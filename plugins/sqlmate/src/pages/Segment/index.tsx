@@ -17,6 +17,7 @@ export default function Segment({ enterAction }: { enterAction: any }) {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [result, setResult] = useState<{ files?: { name: string, content: string }[], fileCount: number, fileNames?: string[] } | null>(null)
+  const [savedDir, setSavedDir] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function Segment({ enterAction }: { enterAction: any }) {
 
     setError(null)
     setResult(null)
+    setSavedDir(null)
     setProgress(0)
     setProcessing(true)
 
@@ -72,6 +74,7 @@ export default function Segment({ enterAction }: { enterAction: any }) {
 
       setResult(res)
       if (isLarge && outputDir) {
+        setSavedDir(outputDir)
         window.ztools.showNotification('分割完成，文件已保存')
       }
     } catch (err: any) {
@@ -173,8 +176,14 @@ export default function Segment({ enterAction }: { enterAction: any }) {
         <div className="section">
           <div className="label">处理结果</div>
           {isLarge ? (
-            <div className="success">
-              分割完成！共生成 {result.fileCount} 个文件。
+            <div>
+              <p className="success">分割完成！共生成 {result.fileCount} 个文件。</p>
+              {savedDir && (
+                <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+                  onClick={() => window.ztools.shellShowItemInFolder(savedDir)}>
+                  在文件管理器中显示
+                </button>
+              )}
             </div>
           ) : (
             <>

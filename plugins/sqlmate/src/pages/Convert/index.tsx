@@ -27,6 +27,7 @@ export default function Convert({ enterAction }: { enterAction?: any }) {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<{ sql?: string; convertedCount: number; skippedCount: number } | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
 
   const needsPk = mode !== 'insert_ignore'
   const canRun = (!!sql || !!filePath) &&
@@ -56,7 +57,7 @@ export default function Convert({ enterAction }: { enterAction?: any }) {
         }
       )
       setResult(res)
-      if (isLarge) window.ztools.showNotification('处理完成，已保存')
+      if (isLarge && outputPath) { setSavedPath(outputPath); window.ztools.showNotification('处理完成，已保存') }
     } catch (err: any) {
       window.ztools.showNotification(`处理失败: ${err.message || err}`)
     } finally {
@@ -124,7 +125,11 @@ export default function Convert({ enterAction }: { enterAction?: any }) {
           meta={<span>成功转换 <b>{result.convertedCount}</b> 行，跳过 {result.skippedCount} 行</span>} />
       )}
       {result && isLarge && (
-        <p className="success">处理完成！成功转换 {result.convertedCount} 行，跳过 {result.skippedCount} 行</p>
+        <div>
+          <p className="success">处理完成！成功转换 {result.convertedCount} 行，跳过 {result.skippedCount} 行</p>
+          {savedPath && <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+            onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>在文件管理器中显示</button>}
+        </div>
       )}
     </PageLayout>
   )

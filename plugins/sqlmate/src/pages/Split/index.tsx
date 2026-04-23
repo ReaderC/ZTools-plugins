@@ -13,6 +13,7 @@ export default function Split({ enterAction }: { enterAction: any }) {
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState<number | null>(null)
   const [result, setResult] = useState<{ sql?: string, statementCount: number } | null>(null)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function Split({ enterAction }: { enterAction: any }) {
 
     setError(null)
     setResult(null)
+    setSavedPath(null)
     setProgress(0)
     setProcessing(true)
 
@@ -65,6 +67,7 @@ export default function Split({ enterAction }: { enterAction: any }) {
 
       setResult(res)
       if (isLarge && outputPath) {
+        setSavedPath(outputPath)
         window.ztools.showNotification('拆分完成，文件已保存')
       }
     } catch (err: any) {
@@ -107,8 +110,14 @@ export default function Split({ enterAction }: { enterAction: any }) {
         <div className="section">
           <div className="label">处理结果</div>
           {isLarge ? (
-            <div className="success">
-              拆分完成！共生成 {result.statementCount} 条语句。
+            <div>
+              <p className="success">拆分完成！共生成 {result.statementCount} 条语句。</p>
+              {savedPath && (
+                <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+                  onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>
+                  在文件管理器中显示
+                </button>
+              )}
             </div>
           ) : (
             <ResultPanel

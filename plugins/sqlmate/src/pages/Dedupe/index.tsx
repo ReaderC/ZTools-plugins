@@ -18,6 +18,7 @@ export default function Dedupe({ enterAction }: { enterAction?: any }) {
 
   const [processing, setProcessing] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [savedPath, setSavedPath] = useState<string | null>(null)
   const [result, setResult] = useState<{
     sql?: string
     originalCount: number
@@ -41,6 +42,7 @@ export default function Dedupe({ enterAction }: { enterAction?: any }) {
 
     setProcessing(true)
     setProgress(0)
+    setSavedPath(null)
     setResult(null)
 
     try {
@@ -69,7 +71,8 @@ export default function Dedupe({ enterAction }: { enterAction?: any }) {
       )
 
       setResult(res)
-      if (isLarge) {
+      if (isLarge && outputPath) {
+        setSavedPath(outputPath)
         window.ztools.showNotification('大文件处理完成，已保存到指定路径')
       }
     } catch (err: any) {
@@ -173,6 +176,12 @@ export default function Dedupe({ enterAction }: { enterAction?: any }) {
             <span style={{ marginLeft: '16px' }} className="success">保留行数: {result.keptCount}</span>
             <span style={{ marginLeft: '16px' }} className="error">删除行数: {result.removedCount}</span>
           </div>
+          {savedPath && (
+            <button className="file-input__btn file-input__btn--ghost" style={{ marginTop: 8 }}
+              onClick={() => window.ztools.shellShowItemInFolder(savedPath)}>
+              在文件管理器中显示
+            </button>
+          )}
         </div>
       )}
     </PageLayout>

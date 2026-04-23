@@ -168,26 +168,46 @@ function sqlToCsv(sql, outputPath) {
 
 /**
  * SQL → xlsx 文件（多表 → 多 Sheet）
+ * 每张表超过 100W 行自动拆分为 tableName_1、tableName_2... 多个 Sheet
  * @param {string} sql
  * @param {string} outputPath  .xlsx 文件路径
- * @returns {{ tableCount: number, rowCount: number }}
+ * @returns {{ tableCount: number, sheetCount: number, rowCount: number }}
  */
 function sqlToXlsx(sql, outputPath) {
   const tables = parseInsertToRows(sql)
   if (tables.length === 0) throw new Error('未找到 INSERT 语句')
 
   const wb = XLSX.utils.book_new()
+  let sheetCount = 0
+
   for (const table of tables) {
-    const data = [table.columns, ...table.rows]
-    const ws = XLSX.utils.aoa_to_sheet(data)
-    XLSX.utils.book_append_sheet(wb, ws, table.tableName.slice(0, 31))
+    const { columns, rows } = table
+    const baseName = table.tableName.slice(0, 28) // 留 3 位给 _序号
+
+    if (rows.length <= MAX_ROWS_PER_FILE) {
+      // 不需要分片
+      const ws = XLSX.utils.aoa_to_sheet([columns, ...rows])
+      XLSX.utils.book_append_sheet(wb, ws, baseName)
+      sheetCount++
+    } else {
+      // 超过 100W 行，按 MAX_ROWS_PER_FILE 拆分多个 Sheet
+      let partIndex = 1
+      for (let i = 0; i < rows.length; i += MAX_ROWS_PER_FILE) {
+        const chunk = rows.slice(i, i + MAX_ROWS_PER_FILE)
+        const ws = XLSX.utils.aoa_to_sheet([columns, ...chunk])
+        const sheetName = `${baseName}_${partIndex}`
+        XLSX.utils.book_append_sheet(wb, ws, sheetName)
+        sheetCount++
+        partIndex++
+      }
+    }
   }
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true })
   XLSX.writeFile(wb, outputPath)
 
   const rowCount = tables.reduce((sum, t) => sum + t.rows.length, 0)
-  return { tableCount: tables.length, rowCount }
+  return { tableCount: tables.length, sheetCount, rowCount }
 }
 
 // ─── CSV → SQL ────────────────────────────────────────────────────────────────
@@ -354,9 +374,160 @@ function xlsxToSql(filePath, options = {}) {
   return { sql: allSql.join('\n\n'), tableCount: wb.SheetNames.length, rowCount: totalRows }
 }
 
+// ─── SQL → CSV 流式版（大文件 O(1) 内存）────────────────────────────────────
+
+const readline = require('node:readline')
+
+function csvEscapeValue(val) {
+  if (val.includes(',') || val.includes('"') || val.includes('\n') || val.includes('\r')) {
+    return '"' + val.replace(/"/g, '""') + '"'
+  }
+  return val
+}
+
+/**
+ * 流式 SQL → CSV：readline 逐行读取，每行解析后立即写出，内存 O(1)。
+ *
+ * 单表：outputPath 为目标文件完整路径（如 /dir/output.csv）
+ * 多表：outputPath 为目标目录，每张表直接在该目录下生成 tableName.csv
+ * 超过 100W 行自动拆分：tableName.csv → tableName_2.csv → ...
+ *
+ * @param {string} inputPath      SQL 文件路径
+ * @param {string} outputPath     单表时为文件路径；多表时为目录路径
+ * @param {{ onProgress?: (info:{bytesRead,totalBytes,pct,rowCount})=>void }} options
+ * @returns {Promise<{ tableCount: number, rowCount: number, files: string[] }>}
+ */
+const MAX_ROWS_PER_FILE = 1_000_000 // Excel/WPS 单文件行上限
+
+async function sqlToCsvStream(inputPath, outputPath, options = {}) {
+  const { onProgress } = options
+  const totalBytes = fs.statSync(inputPath).size
+  let bytesRead = 0, totalRowCount = 0
+  // 按时间间隔触发进度，避免百分比跳变和过度让出事件循环
+  let lastNotifyTime = Date.now()
+  const NOTIFY_INTERVAL_MS = 80 // 每 80ms 通知一次，约 12fps
+
+  // 第一遍需要先扫描表数才能知道是单表还是多表，
+  // 但流式读取只能一遍，所以先按多表逻辑写到临时 Map，
+  // 收尾时判断是否需要 rename（单表）
+  const tableState = new Map()
+  const files = []
+  // 先确保 outputPath 的父目录存在（单表时父目录；多表时就是 outputPath 本身）
+  fs.mkdirSync(outputPath, { recursive: true })
+
+  function openWriter(tableName, sheetIndex, columns, outputDir) {
+    const suffix = sheetIndex === 1 ? '' : `_${sheetIndex}`
+    const filePath = path.join(outputDir, `${tableName}${suffix}.csv`)
+    const writer = fs.createWriteStream(filePath, { encoding: 'utf-8' })
+    if (columns.length > 0) writer.write(columns.map(csvEscapeValue).join(',') + '\r\n')
+    files.push(filePath)
+    return { writer, filePath }
+  }
+
+  function getState(tableName, columns) {
+    if (!tableState.has(tableName)) {
+      // 始终用 outputPath 作为目录（单表时收尾再 rename）
+      const { writer, filePath } = openWriter(tableName, 1, columns, outputPath)
+      tableState.set(tableName, { writer, filePath, sheetRows: 0, sheetIndex: 1, columns })
+    }
+    return tableState.get(tableName)
+  }
+
+  function writeRow(tableName, columns, tokens) {
+    const state = getState(tableName, columns)
+    // 超过 100W 行，滚动到下一个文件
+    if (state.sheetRows >= MAX_ROWS_PER_FILE) {
+      state.writer.end()
+      state.sheetIndex++
+      state.sheetRows = 0
+      const { writer, filePath } = openWriter(tableName, state.sheetIndex, state.columns, outputPath)
+      state.writer = writer
+      state.filePath = filePath
+    }
+    state.writer.write(tokens.map(csvEscapeValue).join(',') + '\r\n')
+    state.sheetRows++
+    totalRowCount++
+  }
+
+  const rl = readline.createInterface({
+    input: fs.createReadStream(inputPath, { encoding: 'utf8' }),
+    crlfDelay: Infinity,
+  })
+
+  // 状态机：跨行语句缓冲（dump 文件中 INSERT 通常单行，但保险起见支持多行）
+  let stmtBuf = ''
+
+  function flushStatement(stmt) {
+    const match = INSERT_HDR_RE.exec(stmt)
+    if (!match) return
+
+    const tableName = normalizeTableName(match[1])
+    const colStr = match[2] ?? ''
+    const columns = colStr ? parseColumns(colStr) : []
+    const valuesOffset = match.index + match[0].length
+    const valuesRaw = stmt.slice(valuesOffset).replace(/[;\s]+$/, '').trim()
+
+    // 遍历所有 tuple，每个 tuple 立即写一行 CSV（超限自动滚动新文件）
+    let depth = 0, inStr = false, tupleStart = -1
+    for (let i = 0; i < valuesRaw.length; i++) {
+      const ch = valuesRaw[i]
+      if (inStr) {
+        if (ch === '\\') { i++; continue }
+        if (ch === "'" && valuesRaw[i + 1] === "'") { i++; continue }
+        if (ch === "'") inStr = false
+      } else {
+        if (ch === "'") { inStr = true }
+        else if (ch === '(') { if (depth === 0) tupleStart = i; depth++ }
+        else if (ch === ')') {
+          depth--
+          if (depth === 0 && tupleStart !== -1) {
+            const tokens = splitTupleTokens(valuesRaw.slice(tupleStart, i + 1)).map(parseSqlValue)
+            writeRow(tableName, columns, tokens)
+            tupleStart = -1
+          }
+        }
+      }
+    }
+  }
+
+  for await (const line of rl) {
+    bytesRead += Buffer.byteLength(line, 'utf8') + 1
+    const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
+
+    stmtBuf += line.replace(/\r$/, '') + '\n'
+    if (line.trimEnd().endsWith(';')) {
+      flushStatement(stmtBuf.trim())
+      stmtBuf = ''
+    }
+
+    if (onProgress) {
+      const now = Date.now()
+      if (now - lastNotifyTime >= NOTIFY_INTERVAL_MS) {
+        const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
+        onProgress({ bytesRead, totalBytes, pct, rowCount: totalRowCount })
+        lastNotifyTime = now
+        // 让出事件循环，React 可重渲染进度条
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      }
+    }
+  }
+  if (stmtBuf.trim()) flushStatement(stmtBuf.trim())
+
+  // 关闭所有 writer
+  await Promise.all(
+    Array.from(tableState.values()).map(
+      ({ writer }) => new Promise((resolve, reject) => writer.end((err) => (err ? reject(err) : resolve())))
+    )
+  )
+
+  if (onProgress) onProgress({ bytesRead: totalBytes, totalBytes, pct: 100, rowCount: totalRowCount })
+  return { tableCount: tableState.size, rowCount: totalRowCount, files }
+}
+
 module.exports = {
   parseInsertToRows,
   sqlToCsv,
+  sqlToCsvStream,
   sqlToXlsx,
   csvToSql,
   xlsxToSql,
