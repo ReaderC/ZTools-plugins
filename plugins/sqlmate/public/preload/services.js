@@ -437,7 +437,7 @@ window.services = {
 
   /**
    * 内部：用 readline 流式读取文件并上报真实字节进度，返回完整字符串。
-   * 每行读完后让出事件循环，React 可正常重渲染。
+   * 每行读完后让出事件循环（setTimeout 0），React 可正常重渲染。
    * 若 input 不是存在的文件路径，直接返回原字符串。
    * @private
    */
@@ -463,7 +463,7 @@ window.services = {
         onProgress({ bytesRead, totalBytes, pct })
         lastPct = pct
         // 让出事件循环，React 可重渲染进度条
-        await new Promise((resolve) => setImmediate(resolve))
+        await new Promise((resolve) => setTimeout(resolve, 0))
       }
     }
 
@@ -508,7 +508,7 @@ window.services = {
       if (pct > lastPct) {
         onProgress({ rowsRead, totalRows: rowsRead, pct })
         lastPct = pct
-        await new Promise((resolve) => setImmediate(resolve))
+        await new Promise((resolve) => setTimeout(resolve, 0))
       }
     }
 
@@ -532,7 +532,7 @@ window.services = {
     const { onProgress, ...convertOptions } = options
     if (!onProgress) return xlsxToSql(xlsxPath, convertOptions)
 
-    // xlsx 解析同步，用 setImmediate 在分 Sheet 处理间让出事件循环上报进度
+    // xlsx 解析同步，用 setTimeout(0) 在分 Sheet 处理间让出事件循环上报进度
     const XLSX = require('xlsx')
     const wb = XLSX.readFile(xlsxPath)
 
@@ -547,7 +547,7 @@ window.services = {
     if (totalRows === 0) totalRows = 1
 
     onProgress({ rowsRead: 0, totalRows, pct: 0 })
-    await new Promise((resolve) => setImmediate(resolve))
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // 逐 Sheet 处理，每 Sheet 完成后上报进度
     const { noHeader = false, batchSize = 0, detectNumeric = true, tableNameOverride } = convertOptions
@@ -601,7 +601,7 @@ window.services = {
       const pct = Math.min(99, Math.floor((processedRows / totalRows) * 100))
       onProgress({ rowsRead: processedRows, totalRows, pct })
       // 每个 Sheet 处理完让出事件循环
-      await new Promise((resolve) => setImmediate(resolve))
+      await new Promise((resolve) => setTimeout(resolve, 0))
     }
 
     onProgress({ rowsRead: processedRows, totalRows, pct: 100 })
