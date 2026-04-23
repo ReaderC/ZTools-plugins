@@ -2,6 +2,7 @@
 'use strict'
 
 const { parseInsertLine, splitMultiRowInsert, quoteTableName } = require('./dedupe')
+const { splitStatements } = require('./segment')
 
 const CHINESE_SURNAMES = ['王','李','张','刘','陈','杨','黄','赵','吴','周',
   '徐','孙','马','朱','胡','郭','何','高','林','郑']
@@ -69,7 +70,14 @@ function applyMaskType(rawValue, rule, cache) {
     case 'regex_replace': {
       if (!rule.regexPattern) { fakeInner = inner; break }
       try {
-        const re = new RegExp(rule.regexPattern, 'g')
+        // 复用已编译的正则，避免每行都重新编译（用 __re__ 前缀与值缓存区分）
+        const reKey = `__re__:${rule.regexPattern}`
+        let re = cache.get(reKey)
+        if (!re) {
+          re = new RegExp(rule.regexPattern, 'g')
+          cache.set(reKey, re)
+        }
+        re.lastIndex = 0 // g 标志的 RegExp 复用前必须重置 lastIndex
         fakeInner = inner.replace(re, rule.regexReplace ?? '***')
       } catch { fakeInner = inner }
       break
@@ -87,7 +95,7 @@ function applyMaskType(rawValue, rule, cache) {
 function maskSqlWithCache(sql, rules, cache) {
   if (!rules || rules.length === 0) return { sql, maskedCount: 0, warnings: [] }
 
-  const lines = sql.split('\n').flatMap(splitMultiRowInsert)
+  const lines = splitStatements(sql).flatMap(splitMultiRowInsert)
   let maskedCount = 0
   const warningSet = new Set()
 

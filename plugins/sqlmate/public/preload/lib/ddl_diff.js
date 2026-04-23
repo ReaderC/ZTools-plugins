@@ -171,10 +171,26 @@ function parseColDef(fullDef) {
   else if (/\bNULL\b/i.test(def)) { notNull = false; def = def.replace(/\bNULL\b/gi, '').trim() }
 
   let defaultExpr = null
-  const defaultMatch = def.match(/\bDEFAULT\s+(.+?)(?:\s+(?:ON\s+UPDATE|AUTO_INCREMENT|COMMENT|CHARACTER\s+SET|COLLATE)\b|$)/i)
-  if (defaultMatch) {
-    defaultExpr = defaultMatch[1].trim()
-    def = def.slice(0, defaultMatch.index).trim()
+  const defaultStart = def.search(/\bDEFAULT\s+/i)
+  if (defaultStart !== -1) {
+    // 找到 DEFAULT 关键字后，用字符扫描提取值（正确跳过字符串字面量）
+    const afterKw = def.slice(defaultStart).replace(/^DEFAULT\s+/i, '')
+    let i = 0, inStr = false
+    while (i < afterKw.length) {
+      const ch = afterKw[i]
+      if (inStr) {
+        if (ch === '\\') { i += 2; continue }                          // 反斜杠转义
+        if (ch === "'" && afterKw[i + 1] === "'") { i += 2; continue } // '' 转义
+        if (ch === "'") { inStr = false; i++; continue }
+      } else {
+        if (ch === "'") { inStr = true; i++; continue }
+        // 在字符串外遇到后续关键字时停止
+        if (/^(?:ON\s+UPDATE|AUTO_INCREMENT|COMMENT|CHARACTER\s+SET|COLLATE)\b/i.test(afterKw.slice(i))) break
+      }
+      i++
+    }
+    defaultExpr = afterKw.slice(0, i).trim()
+    def = def.slice(0, defaultStart).trim()
   }
   def = def.replace(/\bAUTO_INCREMENT\b/gi, '').replace(/\bCOMMENT\s+'[^']*'/gi, '').trim()
   return { typePart: def.trim(), notNull, defaultExpr }

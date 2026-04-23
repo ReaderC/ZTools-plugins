@@ -46,10 +46,6 @@ async function splitFileStream(inputPath, outputPath, options = {}) {
   const writer = fs.createWriteStream(outputPath, { encoding: 'utf8' })
   let statementCount = 0
 
-  // 每次 readline 给一行，但 INSERT 语句可能跨多行（大文件 dump 少见，但需处理）
-  // 策略：按行拼接，遇到以 ; 结尾的行视为语句完成
-  let buf = ''
-
   const processStmt = (stmt) => {
     const m = INSERT_PREFIX_RE.exec(stmt)
     if (!m) { writer.write(stmt + '\n'); return }
@@ -64,18 +60,56 @@ async function splitFileStream(inputPath, outputPath, options = {}) {
     }
   }
 
+  // 跨行状态机：正确识别语句边界，不被字符串/注释内的分号误触发
+  // 状态：'normal' | 'string' | 'line_comment' | 'block_comment'
+  let state = 'normal'
+  let stmtBuf = ''
+
+  const processLine = (line) => {
+    let i = 0
+    while (i < line.length) {
+      const ch = line[i]
+      switch (state) {
+        case 'normal':
+          if (ch === "'") { state = 'string'; stmtBuf += ch; i++ }
+          else if (ch === '-' && line[i + 1] === '-') { state = 'line_comment'; stmtBuf += '--'; i += 2 }
+          else if (ch === '/' && line[i + 1] === '*') { state = 'block_comment'; stmtBuf += '/*'; i += 2 }
+          else if (ch === ';') {
+            stmtBuf += ch
+            processStmt(stmtBuf.trim())
+            stmtBuf = ''
+            i++
+          } else { stmtBuf += ch; i++ }
+          break
+        case 'string':
+          if (ch === '\\') { stmtBuf += ch + (line[i + 1] ?? ''); i += 2 }         // 反斜杠转义（MySQL）
+          else if (ch === "'" && line[i + 1] === "'") { stmtBuf += "''"; i += 2 }  // '' 转义（标准 SQL）
+          else if (ch === "'") { state = 'normal'; stmtBuf += ch; i++ }
+          else { stmtBuf += ch; i++ }
+          break
+        case 'line_comment':
+          stmtBuf += ch; i++
+          break
+        case 'block_comment':
+          if (ch === '*' && line[i + 1] === '/') { state = 'normal'; stmtBuf += '*/'; i += 2 }
+          else { stmtBuf += ch; i++ }
+          break
+      }
+    }
+    // 行注释在行尾自动结束
+    if (state === 'line_comment') state = 'normal'
+    stmtBuf += '\n'
+  }
+
   for await (const line of rl) {
     bytesRead += Buffer.byteLength(line, 'utf8') + 1
     const pct = Math.min(99, Math.floor((bytesRead / inputSize) * 100))
     if (onProgress && pct > lastPct) { onProgress(pct); lastPct = pct }
 
-    buf += line.replace(/\r$/, '') + '\n'
-    if (line.trimEnd().endsWith(';')) {
-      processStmt(buf.trim())
-      buf = ''
-    }
+    processLine(line.replace(/\r$/, ''))
   }
-  if (buf.trim()) processStmt(buf.trim())
+  // 末尾无分号的残余语句
+  if (stmtBuf.trim()) processStmt(stmtBuf.trim())
 
   await new Promise((resolve, reject) => writer.end((err) => (err ? reject(err) : resolve())))
   if (onProgress) onProgress(100)

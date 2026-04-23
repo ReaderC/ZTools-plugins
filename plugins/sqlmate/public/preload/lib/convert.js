@@ -7,6 +7,7 @@
 const fs   = require('node:fs')
 const path = require('node:path')
 const XLSX = require('xlsx')
+const { splitStatements } = require('./segment')
 
 // ─── SQL → 结构化行数据 ───────────────────────────────────────────────────────
 
@@ -98,23 +99,15 @@ function processStatement(stmt, tableMap) {
 
 /**
  * 解析 SQL 中所有 INSERT 语句为结构化行数据
+ * 使用状态机正确识别语句边界（处理字符串内分号、注释等）
  * @param {string} sql
  * @returns {{ tableName: string, columns: string[], rows: string[][] }[]}
  */
 function parseInsertToRows(sql) {
   const tableMap = new Map()
-  const lines = sql.split('\n')
-  let buf = ''
-  for (const line of lines) {
-    buf += line.replace(/\r$/, '') + '\n'
-    if (line.trimEnd().endsWith(';')) {
-      const stmt = buf.trim()
-      buf = ''
-      if (stmt) processStatement(stmt, tableMap)
-    }
+  for (const stmt of splitStatements(sql)) {
+    if (stmt.trim()) processStatement(stmt, tableMap)
   }
-  const remaining = buf.trim()
-  if (remaining) processStatement(remaining, tableMap)
   return Array.from(tableMap.values())
 }
 
@@ -182,7 +175,7 @@ function sqlToXlsx(sql, outputPath) {
 
   for (const table of tables) {
     const { columns, rows } = table
-    const baseName = table.tableName.slice(0, 28) // 留 3 位给 _序号
+    const baseName = table.tableName.slice(0, 26) // 留 5 位给 _序号（支持 _9999 四位数分片）
 
     if (rows.length <= MAX_ROWS_PER_FILE) {
       // 不需要分片

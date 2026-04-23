@@ -1,6 +1,8 @@
 // dedupe.js — INSERT 去重
 'use strict'
 
+const { splitStatements } = require('./segment')
+
 function parseSqlValues(valStr) {
   const tokens = []
   let i = 0
@@ -153,7 +155,9 @@ function extractKey(parsed, keyColumn, keyColIndex) {
 
 function dedupeSql(sql, options) {
   const { keyColumn, keyColIndex, keepLast = true } = options || {}
-  const lines = sql.split('\n').flatMap(splitMultiRowInsert)
+  // 先用状态机正确拆分完整语句（处理多行 INSERT、字符串内分号等），
+  // 再对每条语句展开多值 INSERT 为单行
+  const lines = splitStatements(sql).flatMap(splitMultiRowInsert)
   const keyToIndex = new Map()
   let originalCount = 0
 

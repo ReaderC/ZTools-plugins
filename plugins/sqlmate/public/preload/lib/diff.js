@@ -2,10 +2,11 @@
 'use strict'
 
 const { parseInsertLine, splitMultiRowInsert } = require('./dedupe')
+const { splitStatements } = require('./segment')
 
 function extractRows(sql, keyColumn, keyColIndex) {
   const map = new Map()
-  for (const line of sql.split('\n').flatMap(splitMultiRowInsert)) {
+  for (const line of splitStatements(sql).flatMap(splitMultiRowInsert)) {
     const trimmed = line.trimEnd()
     if (!/^INSERT\s+INTO\s+/i.test(trimmed)) continue
     const parsed = parseInsertLine(trimmed)
