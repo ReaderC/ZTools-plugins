@@ -2,6 +2,7 @@
 'use strict'
 
 const { parseInsertLine, splitMultiRowInsert, quoteTableName } = require('./dedupe')
+const { splitStatements } = require('./segment')
 
 function buildSetClause(columns, values, pkIdx, excludeSet) {
   return columns
@@ -71,7 +72,7 @@ function convertLine(line, options) {
 }
 
 function convertStatements(sql, options) {
-  const lines = sql.split('\n').flatMap(splitMultiRowInsert)
+  const lines = splitStatements(sql).flatMap(splitMultiRowInsert)
   let convertedCount = 0
   let skippedCount = 0
 

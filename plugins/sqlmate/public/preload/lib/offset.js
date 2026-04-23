@@ -2,11 +2,12 @@
 'use strict'
 
 const { parseInsertLine, splitMultiRowInsert, quoteTableName } = require('./dedupe')
+const { splitStatements } = require('./segment')
 
 function offsetSql(sql, rules) {
   if (!rules || rules.length === 0) return { sql, modifiedCount: 0, skippedCount: 0, warnings: [] }
 
-  const lines = sql.split('\n').flatMap(splitMultiRowInsert)
+  const lines = splitStatements(sql).flatMap(splitMultiRowInsert)
   let modifiedCount = 0
   let skippedCount = 0
   const warningSet = new Set()
