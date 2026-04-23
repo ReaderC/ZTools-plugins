@@ -114,8 +114,8 @@ function forEachTupleInInsert(line, cb) {
 }
 
 function parseInsertLine(line) {
-  const re =
-    /^INSERT\s+INTO\s+`?([^`\s(]+)`?\s*(?:\(([^)]*)\)\s*)?VALUES\s*\(([^)]*(?:\)[^;]*\()*[^)]*)\)/i
+  // 简化正则：只匹配到 VALUES ( 为止，不捕获 values 内容（避免嵌套重复的回溯风险）
+  const re = /^INSERT\s+INTO\s+`?([^`\s(]+)`?\s*(?:\(([^)]*)\)\s*)?VALUES\s*\(/i
   const m = line.match(re)
   if (!m) return null
 
@@ -125,11 +125,10 @@ function parseInsertLine(line) {
     columns = m[2].split(',').map((c) => c.trim().replace(/^`|`$/g, ''))
   }
 
-  const valuesStart = line.search(/VALUES\s*\(/i)
-  if (valuesStart === -1) return null
-  const parenOpen = line.indexOf('(', valuesStart)
+  // m[0] 末尾即是 '('，精确定位，无需二次搜索
+  const parenOpen = m.index + m[0].length - 1
   const parenClose = line.lastIndexOf(')')
-  if (parenOpen === -1 || parenClose === -1 || parenClose <= parenOpen) return null
+  if (parenClose === -1 || parenClose <= parenOpen) return null
 
   const valStr = line.slice(parenOpen + 1, parenClose)
   const values = parseSqlValues(valStr)

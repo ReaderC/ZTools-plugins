@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { PageLayout } from '../../components/PageLayout'
 import { FileInput } from '../../components/FileInput'
+import { ProgressBar } from '../../components/ProgressBar'
 import { useFileEnterAction } from '../../hooks/useFileEnterAction'
 
 type OutputFormat = 'csv' | 'xlsx'
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
 
 export default function SqlToCsv({ enterAction }: { enterAction?: any }) {
   const [sql, setSql] = useState('')
@@ -13,24 +20,28 @@ export default function SqlToCsv({ enterAction }: { enterAction?: any }) {
 
   const [format, setFormat] = useState<OutputFormat>('csv')
   const [processing, setProcessing] = useState(false)
+  const [progress, setProgress] = useState<{ pct: number; bytesRead: number; totalBytes: number } | null>(null)
   const [result, setResult] = useState<{ tableCount: number; rowCount: number; files?: string[] } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const canRun = !!sql || !!filePath
 
   async function handleExecute() {
-    setProcessing(true); setError(null); setResult(null)
+    setProcessing(true); setError(null); setResult(null); setProgress(null)
     try {
       const input = isLarge && filePath ? filePath : sql
 
+      const onProgress = (info: { bytesRead: number; totalBytes: number; pct: number }) => {
+        setProgress(info)
+      }
+
       if (format === 'csv') {
-        // 弹出保存对话框（单表 → .csv 文件，多表 → 选目录）
         const savePath = window.ztools.showSaveDialog({
           defaultPath: 'output.csv',
           filters: [{ name: 'CSV', extensions: ['csv'] }],
         })
         if (!savePath) { setProcessing(false); return }
-        const res = window.services.sqlToCsv(input, savePath)
+        const res = await window.services.sqlToCsv(input, savePath, { onProgress })
         setResult(res)
         window.ztools.showNotification(`导出完成，共 ${res.tableCount} 张表 ${res.rowCount} 行`)
       } else {
@@ -39,7 +50,7 @@ export default function SqlToCsv({ enterAction }: { enterAction?: any }) {
           filters: [{ name: 'Excel', extensions: ['xlsx'] }],
         })
         if (!savePath) { setProcessing(false); return }
-        const res = window.services.sqlToXlsx(input, savePath)
+        const res = await window.services.sqlToXlsx(input, savePath, { onProgress })
         setResult(res)
         window.ztools.showNotification(`导出完成，共 ${res.tableCount} 张表 ${res.rowCount} 行`)
       }
@@ -81,6 +92,15 @@ export default function SqlToCsv({ enterAction }: { enterAction?: any }) {
           {processing ? '导出中...' : '选择保存位置并导出'}
         </button>
       </div>
+
+      {processing && (
+        progress && progress.totalBytes > 0
+          ? <ProgressBar
+              pct={progress.pct}
+              label={`读取中 ${formatBytes(progress.bytesRead)} / ${formatBytes(progress.totalBytes)}`}
+            />
+          : <ProgressBar indeterminate />
+      )}
 
       {error && <p className="error">{error}</p>}
 

@@ -8,14 +8,18 @@ export default function DdlDiff() {
   const [dialect, setDialect] = useState<DdlDialect>('mysql')
   const [includeIndexes, setIncludeIndexes] = useState(true)
   const [result, setResult] = useState<{ diff: DdlDiffResult; alterSql: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const handleDiff = () => {
     if (!srcDdl || !dstDdl) return
+    setError(null)
     try {
       const res = window.services.ddlDiff(srcDdl, dstDdl, dialect, includeIndexes)
       setResult(res)
-    } catch (err) {
-      console.error(err)
+    } catch (err: any) {
+      const msg = err?.message || String(err)
+      setError(msg)
+      window.ztools.showNotification(`对比失败: ${msg}`)
     }
   }
 
@@ -117,6 +121,8 @@ export default function DdlDiff() {
           执行对比
         </button>
       </div>
+
+      {error && <p className="error">{error}</p>}
 
       {result && (
         <div className="section" style={{ marginTop: 24 }}>

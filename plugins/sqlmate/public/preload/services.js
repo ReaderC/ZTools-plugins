@@ -407,54 +407,204 @@ window.services = {
   // ── SQL → CSV / xlsx ──────────────────────────────────────────────────────────
 
   /**
-   * SQL INSERT → CSV 文件
+   * SQL INSERT → CSV 文件（async，支持真实字节进度）
    * 单表写到 outputPath（.csv），多表写到 outputPath 目录（每表一个 .csv）
    *
    * @param {string} inputSql      SQL 字符串 或 文件路径
    * @param {string} outputPath    输出文件或目录路径
-   * @returns {{ tableCount, rowCount, files: string[] }}
+   * @param {{ onProgress?: (info: { bytesRead: number, totalBytes: number, pct: number }) => void }} [options]
+   * @returns {Promise<{ tableCount, rowCount, files: string[] }>}
    */
-  sqlToCsv(inputSql, outputPath) {
-    const sql = fs.existsSync(inputSql) ? fs.readFileSync(inputSql, 'utf-8') : inputSql
+  async sqlToCsv(inputSql, outputPath, options = {}) {
+    const { onProgress } = options
+    const sql = await this._readFileWithProgress(inputSql, onProgress)
     return sqlToCsv(sql, outputPath)
   },
 
   /**
-   * SQL INSERT → xlsx 文件（多表 → 多 Sheet）
+   * SQL INSERT → xlsx 文件（async，支持真实字节进度）
    *
    * @param {string} inputSql      SQL 字符串 或 文件路径
    * @param {string} outputPath    输出 .xlsx 文件路径
-   * @returns {{ tableCount, rowCount }}
+   * @param {{ onProgress?: (info: { bytesRead: number, totalBytes: number, pct: number }) => void }} [options]
+   * @returns {Promise<{ tableCount, rowCount }>}
    */
-  sqlToXlsx(inputSql, outputPath) {
-    const sql = fs.existsSync(inputSql) ? fs.readFileSync(inputSql, 'utf-8') : inputSql
+  async sqlToXlsx(inputSql, outputPath, options = {}) {
+    const { onProgress } = options
+    const sql = await this._readFileWithProgress(inputSql, onProgress)
     return sqlToXlsx(sql, outputPath)
+  },
+
+  /**
+   * 内部：用 readline 流式读取文件并上报真实字节进度，返回完整字符串。
+   * 每行读完后让出事件循环，React 可正常重渲染。
+   * 若 input 不是存在的文件路径，直接返回原字符串。
+   * @private
+   */
+  async _readFileWithProgress(input, onProgress) {
+    if (!fs.existsSync(input)) return input  // 已是 SQL 字符串
+    if (!onProgress) return fs.readFileSync(input, 'utf-8')
+
+    const totalBytes = fs.statSync(input).size
+    let bytesRead = 0
+    let lastPct = -1
+    const chunks = []
+
+    const rl = readline.createInterface({
+      input: fs.createReadStream(input, { encoding: 'utf8' }),
+      crlfDelay: Infinity,
+    })
+
+    for await (const line of rl) {
+      chunks.push(line)
+      bytesRead += Buffer.byteLength(line, 'utf8') + 1
+      const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
+      if (pct > lastPct) {
+        onProgress({ bytesRead, totalBytes, pct })
+        lastPct = pct
+        // 让出事件循环，React 可重渲染进度条
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+    }
+
+    onProgress({ bytesRead: totalBytes, totalBytes, pct: 100 })
+    return chunks.join('\n')
   },
 
   // ── CSV / xlsx → SQL ──────────────────────────────────────────────────────────
 
   /**
-   * CSV 文件 → SQL INSERT 语句
+   * CSV 文件 → SQL INSERT 语句（async，逐行读取上报进度）
    *
    * @param {string} csvPath       CSV 文件路径
-   * @param {{ tableName: string, noHeader?: boolean, batchSize?: number, detectNumeric?: boolean }} options
-   * @returns {{ sql: string, rowCount: number }}
+   * @param {{ tableName: string, noHeader?: boolean, batchSize?: number, detectNumeric?: boolean,
+   *           onProgress?: (info: { rowsRead: number, totalRows: number, pct: number }) => void }} options
+   * @returns {Promise<{ sql: string, rowCount: number }>}
    */
-  csvToSql(csvPath, options) {
-    const csvText = fs.readFileSync(csvPath, 'utf-8')
-    const sql = csvToSql(csvText, options)
+  async csvToSql(csvPath, options) {
+    const { onProgress, ...convertOptions } = options || {}
+    if (!onProgress) {
+      const csvText = fs.readFileSync(csvPath, 'utf-8')
+      const sql = csvToSql(csvText, convertOptions)
+      const rowCount = sql ? sql.split('\n').filter((l) => l.startsWith('INSERT')).length : 0
+      return { sql, rowCount }
+    }
+
+    // 流式逐行读取，上报真实进度
+    const totalBytes = fs.statSync(csvPath).size
+    let bytesRead = 0, lastPct = -1
+    const lines = []
+
+    const rl = readline.createInterface({
+      input: fs.createReadStream(csvPath, { encoding: 'utf8' }),
+      crlfDelay: Infinity,
+    })
+
+    for await (const line of rl) {
+      lines.push(line)
+      bytesRead += Buffer.byteLength(line, 'utf8') + 1
+      const pct = Math.min(99, Math.floor((bytesRead / totalBytes) * 100))
+      const rowsRead = lines.length
+      if (pct > lastPct) {
+        onProgress({ rowsRead, totalRows: rowsRead, pct })
+        lastPct = pct
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+    }
+
+    const csvText = lines.join('\n')
+    const sql = csvToSql(csvText, convertOptions)
     const rowCount = sql ? sql.split('\n').filter((l) => l.startsWith('INSERT')).length : 0
+    onProgress({ rowsRead: lines.length, totalRows: lines.length, pct: 100 })
     return { sql, rowCount }
   },
 
   /**
-   * xlsx 文件 → SQL INSERT 语句（多 Sheet → 多表）
+   * xlsx 文件 → SQL INSERT 语句（async，分 Sheet 上报进度）
    *
    * @param {string} xlsxPath      xlsx 文件路径
-   * @param {{ noHeader?: boolean, batchSize?: number, detectNumeric?: boolean, tableNameOverride?: string }} options
-   * @returns {{ sql: string, tableCount: number, rowCount: number }}
+   * @param {{ noHeader?: boolean, batchSize?: number, detectNumeric?: boolean,
+   *           tableNameOverride?: string,
+   *           onProgress?: (info: { rowsRead: number, totalRows: number, pct: number }) => void }} options
+   * @returns {Promise<{ sql: string, tableCount: number, rowCount: number }>}
    */
-  xlsxToSql(xlsxPath, options = {}) {
-    return xlsxToSql(xlsxPath, options)
+  async xlsxToSql(xlsxPath, options = {}) {
+    const { onProgress, ...convertOptions } = options
+    if (!onProgress) return xlsxToSql(xlsxPath, convertOptions)
+
+    // xlsx 解析同步，用 setImmediate 在分 Sheet 处理间让出事件循环上报进度
+    const XLSX = require('xlsx')
+    const wb = XLSX.readFile(xlsxPath)
+
+    // 第一遍统计总行数
+    let totalRows = 0
+    for (const name of wb.SheetNames) {
+      const ws = wb.Sheets[name]
+      if (!ws['!ref']) continue
+      const range = XLSX.utils.decode_range(ws['!ref'])
+      totalRows += Math.max(0, range.e.r - range.s.r)
+    }
+    if (totalRows === 0) totalRows = 1
+
+    onProgress({ rowsRead: 0, totalRows, pct: 0 })
+    await new Promise((resolve) => setImmediate(resolve))
+
+    // 逐 Sheet 处理，每 Sheet 完成后上报进度
+    const { noHeader = false, batchSize = 0, detectNumeric = true, tableNameOverride } = convertOptions
+    const NUMERIC_RE = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/
+    const allSql = []
+    let processedRows = 0
+
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName]
+      const tableName = tableNameOverride || sheetName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_')
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+      if (aoa.length === 0) continue
+
+      let headers, dataRows
+      if (noHeader) {
+        const colCount = aoa[0].length
+        headers = Array.from({ length: colCount }, (_, i) => `col${i + 1}`)
+        dataRows = aoa
+      } else {
+        headers = aoa[0].map((h) => String(h))
+        dataRows = aoa.slice(1)
+      }
+
+      const colList = headers.map((h) => `\`${String(h).replace(/`/g, '')}\``).join(', ')
+      const safeTable = tableName.replace(/`/g, '')
+      const isNumeric = headers.map((_, ci) => {
+        if (!detectNumeric) return false
+        return dataRows.every((row) => { const v = row[ci]; return v === '' || v === null || v === undefined || NUMERIC_RE.test(String(v)) })
+      })
+      const fmtVal = (val, ci) => {
+        if (val === '' || val === null || val === undefined) return 'NULL'
+        const s = String(val)
+        return isNumeric[ci] ? s : `'${s.replace(/'/g, "''")}'`
+      }
+
+      const size = batchSize > 0 ? batchSize : 0
+      if (!size) {
+        for (const row of dataRows) {
+          allSql.push(`INSERT INTO \`${safeTable}\` (${colList}) VALUES (${headers.map((_, ci) => fmtVal(row[ci], ci)).join(', ')});`)
+          processedRows++
+        }
+      } else {
+        for (let i = 0; i < dataRows.length; i += size) {
+          const batch = dataRows.slice(i, i + size)
+          const rowClauses = batch.map((row) => `  (${headers.map((_, ci) => fmtVal(row[ci], ci)).join(', ')})`).join(',\n')
+          allSql.push(`INSERT INTO \`${safeTable}\` (${colList}) VALUES\n${rowClauses};`)
+          processedRows += batch.length
+        }
+      }
+
+      const pct = Math.min(99, Math.floor((processedRows / totalRows) * 100))
+      onProgress({ rowsRead: processedRows, totalRows, pct })
+      // 每个 Sheet 处理完让出事件循环
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+
+    onProgress({ rowsRead: processedRows, totalRows, pct: 100 })
+    return { sql: allSql.join('\n\n'), tableCount: wb.SheetNames.length, rowCount: processedRows }
   },
 }

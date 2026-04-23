@@ -19,6 +19,17 @@
   transition: width 0.2s;
 }
 
+/* indeterminate 模式：滑动动画条，用于无法获取精确进度的同步操作 */
+.progress__fill--indeterminate {
+  width: 40% !important;
+  animation: progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(350%); }
+}
+
 .progress__label {
   font-size: 11px;
   color: var(--fg-muted);

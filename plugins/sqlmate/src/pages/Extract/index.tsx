@@ -49,7 +49,7 @@ export default function Extract({ enterAction }: { enterAction?: any }) {
       outputPath = window.ztools.showSaveDialog({
         defaultPath: 'extracted.sql',
         filters: [{ name: 'SQL', extensions: ['sql'] }]
-      })
+      }) ?? null
       if (!outputPath) return
     }
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageLayout } from '../../components/PageLayout'
 import { ResultPanel } from '../../components/ResultPanel'
+import { ProgressBar } from '../../components/ProgressBar'
 
 type InputFormat = 'csv' | 'xlsx'
 
@@ -14,6 +15,7 @@ export default function CsvToSql({ enterAction }: { enterAction?: any }) {
   const [result, setResult] = useState<{ sql: string; rowCount: number; tableCount?: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [progressInfo, setProgressInfo] = useState<{ rowsRead: number; totalRows?: number; pct?: number } | null>(null)
 
   function handleSelectFile() {
     const ext = inputFormat === 'csv' ? ['csv', 'txt'] : ['xlsx', 'xls']
@@ -34,24 +36,26 @@ export default function CsvToSql({ enterAction }: { enterAction?: any }) {
 
   const canRun = !!filePath && (inputFormat === 'xlsx' || !!tableName.trim())
 
-  function handleExecute() {
+  async function handleExecute() {
     if (!filePath) return
-    setProcessing(true); setError(null); setResult(null)
+    setProcessing(true); setError(null); setResult(null); setProgressInfo(null)
     try {
       if (inputFormat === 'csv') {
-        const res = window.services.csvToSql(filePath, {
+        const res = await window.services.csvToSql(filePath, {
           tableName: tableName.trim(),
           noHeader,
           batchSize: batchSize > 0 ? batchSize : 0,
           detectNumeric,
+          onProgress: (info: { rowsRead: number; totalRows: number; pct: number }) => setProgressInfo(info),
         })
         setResult(res)
       } else {
-        const res = window.services.xlsxToSql(filePath, {
+        const res = await window.services.xlsxToSql(filePath, {
           noHeader,
           batchSize: batchSize > 0 ? batchSize : 0,
           detectNumeric,
           tableNameOverride: tableName.trim() || undefined,
+          onProgress: (info: { rowsRead: number; totalRows: number; pct: number }) => setProgressInfo(info),
         })
         setResult(res)
       }
@@ -127,6 +131,17 @@ export default function CsvToSql({ enterAction }: { enterAction?: any }) {
           {processing ? '转换中...' : '执行转换'}
         </button>
       </div>
+
+      {processing && (
+        progressInfo && progressInfo.totalRows
+          ? <ProgressBar
+              pct={progressInfo.pct ?? 50}
+              label={`已处理 ${progressInfo.rowsRead.toLocaleString()} / ${progressInfo.totalRows.toLocaleString()} 行`}
+            />
+          : progressInfo
+          ? <ProgressBar indeterminate label={`已读取 ${progressInfo.rowsRead.toLocaleString()} 行`} />
+          : <ProgressBar indeterminate />
+      )}
 
       {error && <p className="error">{error}</p>}
 

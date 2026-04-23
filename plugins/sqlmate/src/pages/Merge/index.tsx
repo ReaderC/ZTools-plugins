@@ -52,7 +52,7 @@ export default function Merge({ enterAction }: { enterAction: any }) {
         outputPath = window.ztools.showSaveDialog({
           defaultPath: 'merged_output.sql',
           filters: [{ name: 'SQL Files', extensions: ['sql', 'txt'] }]
-        })
+        }) ?? null
         if (!outputPath) {
           setProcessing(false)
           setProgress(null)

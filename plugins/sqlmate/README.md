@@ -1,6 +1,6 @@
 # SQLMate Plugin for ZTools
 
-> 本地优先的 SQL 数据处理工具集，12 项功能覆盖 DBA / 开发者日常数据处理全场景。
+> 本地优先的 SQL 数据处理工具集，14 项功能覆盖 DBA / 开发者日常数据处理全场景。
 > 数据不离本机，完全离线运行。
 
 ---
@@ -27,6 +27,13 @@
 | **ID偏移** | `ID偏移` / `主键偏移` | 数值列批量加偏移量，合库时避免主键冲突 |
 | **改写** | `语句改写` / `INSERT转UPDATE` | INSERT → UPDATE / MySQL UPSERT / PG UPSERT / INSERT IGNORE |
 
+### 格式转换
+
+| 功能 | 触发词 | 说明 |
+|------|--------|------|
+| **CSV → SQL** | `CSV转SQL` / `Excel转SQL` / `导入CSV` | CSV / Excel（xlsx）转 INSERT 语句，支持批量插入和数值自动检测 |
+| **SQL → CSV** | `SQL导出` / `导出CSV` / `导出Excel` | INSERT 数据导出为 CSV 或 xlsx，多表自动分 Sheet |
+
 ### 对比分析
 
 | 功能 | 触发词 | 说明 |
@@ -43,7 +50,7 @@
 - **≤ 10 MB**：内存处理，结果直接展示在界面，可复制或保存
 - **> 10 MB**：流式处理（Node.js `readline` 逐行读取），内存占用恒定，支持 GB 级文件
 
-拖拽 `.sql` 文件到 ZTools 搜索框可直接触发对应功能并自动填入。
+拖拽 `.sql` / `.csv` / `.xlsx` 文件到 ZTools 搜索框可直接触发对应功能并自动填入。
 
 ---
 
@@ -51,7 +58,7 @@
 
 1. 在 ZTools 搜索框输入触发词（如 `SQL合并`）打开对应功能
 2. 或直接搜索 `sqlmate` 打开主界面，通过左侧导航切换功能
-3. 粘贴 SQL 文本，或点击「选择文件」/ 拖拽 `.sql` 文件到输入区
+3. 粘贴 SQL 文本，或点击「选择文件」/ 拖拽文件到输入区
 4. 配置参数后点击执行，结果可复制或保存到本地文件
 
 ---
@@ -76,13 +83,14 @@ sqlmate-plugin/
 ├── public/
 │   ├── plugin.json          # ZTools 插件配置
 │   ├── logo.png             # 插件图标
+│   ├── logo.svg             # 图标源文件
 │   └── preload/             # Node.js 服务层（明文，不可混淆）
 │       ├── services.js      # 统一 API 入口，自动路由大/小文件
-│       └── lib/             # 纯函数核心库（12 个功能模块）
+│       └── lib/             # 纯函数核心库（14 个功能模块）
 │           └── stream/      # 流式处理库（大文件 readline）
 ├── src/
 │   ├── App.tsx              # 根组件 + 侧边导航
-│   ├── pages/               # 12 个功能页面
+│   ├── pages/               # 14 个功能页面
 │   ├── components/          # 公共组件（FileInput、ResultPanel 等）
 │   └── hooks/               # React Hooks
 ├── dist/                    # 构建产物（发布插件时使用此目录）

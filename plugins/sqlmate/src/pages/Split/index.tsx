@@ -51,7 +51,7 @@ export default function Split({ enterAction }: { enterAction: any }) {
         outputPath = window.ztools.showSaveDialog({
           defaultPath: 'split_output.sql',
           filters: [{ name: 'SQL Files', extensions: ['sql', 'txt'] }]
-        })
+        }) ?? null
         if (!outputPath) {
           setProcessing(false)
           setProgress(null)

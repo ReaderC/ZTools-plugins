@@ -198,22 +198,42 @@ declare global {
     ): { diff: DdlDiffResult; alterSql: string }
 
     // SQL → CSV
-    sqlToCsv(inputSql: string, outputPath: string): { tableCount: number; rowCount: number; files: string[] }
+    sqlToCsv(
+      inputSql: string,
+      outputPath: string,
+      options?: { onProgress?: (info: { bytesRead: number; totalBytes: number; pct: number }) => void }
+    ): Promise<{ tableCount: number; rowCount: number; files: string[] }>
 
     // SQL → xlsx
-    sqlToXlsx(inputSql: string, outputPath: string): { tableCount: number; rowCount: number }
+    sqlToXlsx(
+      inputSql: string,
+      outputPath: string,
+      options?: { onProgress?: (info: { bytesRead: number; totalBytes: number; pct: number }) => void }
+    ): Promise<{ tableCount: number; rowCount: number }>
 
     // CSV → SQL
     csvToSql(
       csvPath: string,
-      options: { tableName: string; noHeader?: boolean; batchSize?: number; detectNumeric?: boolean }
-    ): { sql: string; rowCount: number }
+      options: {
+        tableName: string
+        noHeader?: boolean
+        batchSize?: number
+        detectNumeric?: boolean
+        onProgress?: (info: { rowsRead: number; totalRows: number; pct: number }) => void
+      }
+    ): Promise<{ sql: string; rowCount: number }>
 
     // xlsx → SQL
     xlsxToSql(
       xlsxPath: string,
-      options?: { noHeader?: boolean; batchSize?: number; detectNumeric?: boolean; tableNameOverride?: string }
-    ): { sql: string; tableCount: number; rowCount: number }
+      options?: {
+        noHeader?: boolean
+        batchSize?: number
+        detectNumeric?: boolean
+        tableNameOverride?: string
+        onProgress?: (info: { rowsRead: number; totalRows: number; pct: number }) => void
+      }
+    ): Promise<{ sql: string; tableCount: number; rowCount: number }>
   }
 
   interface Window {
