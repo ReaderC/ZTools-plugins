@@ -953,13 +953,15 @@ const confirmImport = async () => {
                         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                       </svg>
                     </button>
-                    <button class="btn-icon-sm" @click.stop="openDistribute(skill)" :disabled="loading" title="分发到其他 Agent">
+                    <button class="btn-icon-sm" @click.stop="openDistribute(skill)" :disabled="loading"
+                      title="分发到其他 Agent">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2">
                         <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                       </svg>
                     </button>
-                    <button class="btn-icon-sm danger" @click.stop="handleDelete(skill.id)" :disabled="loading" title="移除技能">
+                    <button class="btn-icon-sm danger" @click.stop="handleDelete(skill.id)" :disabled="loading"
+                      title="移除技能">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2">
                         <polyline points="3 6 5 6 21 6"></polyline>
