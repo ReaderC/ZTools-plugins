@@ -132,9 +132,16 @@ function parseGitHubUrl(input) {
 
   const fullMatch = url.match(/^https?:\/\/github\.com\/([^/]+\/[^/]+)(?:\/tree\/([^/]+)\/(.+))?$/);
   if (fullMatch) {
+    let subPath = fullMatch[3] || null;
+    if (subPath) {
+      // 安全过滤：防止路径穿越 (Path Traversal)
+      if (subPath.includes('..') || path.isAbsolute(subPath) || /[\\:*?"<>|]/.test(subPath)) {
+        subPath = null;
+      }
+    }
     return {
       gitUrl: `https://github.com/${fullMatch[1]}.git`,
-      subPath: fullMatch[3] || null
+      subPath: subPath
     };
   }
 
@@ -142,8 +149,9 @@ function parseGitHubUrl(input) {
     return { gitUrl: `https://github.com/${url}.git`, subPath: null };
   }
 
+  const finalUrl = url.startsWith('http') ? url + '.git' : `https://github.com/${url}.git`;
   return {
-    gitUrl: url.startsWith('http') ? url + '.git' : `https://github.com/${url}.git`,
+    gitUrl: finalUrl,
     subPath: null
   };
 }
@@ -410,6 +418,12 @@ function gitCloneWithFallback(gitUrl, cloneDir, onProgress) {
 
   return new Promise((resolve, reject) => {
     function tryClone() {
+      // 安全检查：防止命令注入 (Git 选项注入)
+      if (gitUrl.trim().startsWith('-')) {
+        reject(new Error("无效的 URL 地址：不能以 '-' 开头"));
+        return;
+      }
+
       const prefix = mirrors[mirrorIndex];
       const url = prefix ? `${prefix}${gitUrl}` : gitUrl;
 
@@ -418,7 +432,8 @@ function gitCloneWithFallback(gitUrl, cloneDir, onProgress) {
       // 清理上次失败的残留
       if (fs.existsSync(cloneDir)) fs.rmSync(cloneDir, { recursive: true, force: true });
 
-      const args = ['clone', '--depth', '1', url, cloneDir];
+      // 使用 -- 确保 url 不会被解析为选项
+      const args = ['clone', '--depth', '1', '--', url, cloneDir];
       const child = spawn('git', args, {
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo' }
       });
@@ -426,14 +441,14 @@ function gitCloneWithFallback(gitUrl, cloneDir, onProgress) {
       let errData = '';
       const TIMEOUT_MS = 30000;
       let timeoutTimer = setTimeout(() => {
-        if (onProgress) onProgress({ type: 'info', text: `[超时] 10秒无响应，正在切换线路...\n` });
+        if (onProgress) onProgress({ type: 'info', text: `[超时] 30秒无响应，正在切换线路...\n` });
         child.kill('SIGKILL');
       }, TIMEOUT_MS);
 
       const resetTimer = () => {
         clearTimeout(timeoutTimer);
         timeoutTimer = setTimeout(() => {
-          if (onProgress) onProgress({ type: 'info', text: `[超时] 10秒无响应，正在切换线路...\n` });
+          if (onProgress) onProgress({ type: 'info', text: `[超时] 30秒无响应，正在切换线路...\n` });
           child.kill('SIGKILL');
         }, TIMEOUT_MS);
       };
@@ -1059,7 +1074,8 @@ function selectSavePath(defaultName = 'ai-skills-manager-backup.json') {
 
     if (platform === 'win32') {
       const { spawn } = require('child_process');
-      const escapedName = defaultName.replace(/'/g, "''");
+      // 严格转义文件名：PowerShell 单引号内双写单引号，并过滤换行符
+      const escapedName = defaultName.replace(/'/g, "''").replace(/[\n\r]/g, "");
       const psCommand = `Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.FileName = '${escapedName}'; $f.Filter = 'JSON Files (*.json)|*.json|All Files (*.*)|*.*'; $f.Title = '选择导出位置'; if($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $f.FileName }`;
 
       const child = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psCommand], { encoding: 'utf-8' });
@@ -1071,7 +1087,9 @@ function selectSavePath(defaultName = 'ai-skills-manager-backup.json') {
       return;
     } else if (platform === 'darwin') {
       const { spawn } = require('child_process');
-      const script = `POSIX path of (choose file name with prompt "选择导出位置" default name "${defaultName.replace(/"/g, '\\"')}")`;
+      // 严格转义文件名：AppleScript 双引号中使用反斜杠转义双引号，并过滤换行符
+      const escapedName = defaultName.replace(/"/g, '\\"').replace(/[\n\r]/g, "");
+      const script = `POSIX path of (choose file name with prompt "选择导出位置" default name "${escapedName}")`;
       const child = spawn('osascript', ['-e', script], { encoding: 'utf-8' });
       let output = '';
       child.stdout.on('data', (data) => { output += data.toString(); });
