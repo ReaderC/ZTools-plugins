@@ -23,7 +23,7 @@ declare global {
       exportSkillsConfig: () => string
       importSkillsConfig: (configJson: string, onProgress?: (msg: any) => void) => Promise<{ success: any[]; failed: any[]; skipped: any[] }>
       saveFileDialog: (content: string, defaultName: string) => string
-      selectSavePath: (defaultName?: string) => string | null
+      selectSavePath: (defaultName?: string) => Promise<string | null>
       refreshRegistry: () => Promise<Skill[]>
     }
     ztools: any
@@ -531,13 +531,20 @@ const importConfigText = ref('')
 const importFileRef = ref<HTMLInputElement | null>(null)
 const handleExport = async () => {
   if (!window.preloadAPI) return
-  const path = await window.preloadAPI.selectSavePath('skills-hub-backup.json')
-  if (path) {
-    try {
+  loading.value = true
+  progressLogs.value = ['正在调起系统文件对话框...']
+  try {
+    const path = await window.preloadAPI.selectSavePath('skills-hub-backup.json')
+    if (path) {
+      progressLogs.value.push('正在打包配置数据...')
       const configJson = await window.preloadAPI.exportSkillsConfig()
       const savedPath = window.preloadAPI.saveFileDialog(configJson, path)
       if (window.ztools) window.ztools.showNotification('配置已导出到: ' + savedPath)
-    } catch (e: any) { alert('导出失败: ' + e.message) }
+    }
+  } catch (e: any) { 
+    alert('导出失败: ' + e.message) 
+  } finally {
+    loading.value = false
   }
 }
 

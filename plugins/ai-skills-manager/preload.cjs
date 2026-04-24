@@ -886,30 +886,45 @@ function saveFileDialog(content, targetPath) {
 
 // 选择保存路径
 function selectSavePath(defaultName = 'skills-hub-backup.json') {
-  const { execSync } = require('child_process');
-  const platform = process.platform;
-  const os = require('os');
-  const home = os.homedir();
+  return new Promise((resolve) => {
+    const { exec } = require('child_process');
+    const platform = process.platform;
+    const os = require('os');
+    const home = os.homedir();
 
-  if (platform === 'win32') {
-    try {
+    if (platform === 'win32') {
       const escapedName = defaultName.replace(/'/g, "''");
       const psCommand = `Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.SaveFileDialog; $f.FileName = '${escapedName}'; $f.Filter = 'JSON Files (*.json)|*.json|All Files (*.*)|*.*'; $f.Title = '选择导出位置'; if($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $f.FileName }`;
-      const result = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`, { encoding: 'utf-8' }).trim();
-      return result || null;
-    } catch (e) { return null; }
-  } else if (platform === 'darwin') {
-    try {
+      exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`, { encoding: 'utf-8' }, (error, stdout) => {
+        if (error) {
+          resolve(null);
+        } else {
+          const result = stdout ? stdout.trim() : '';
+          resolve(result || null);
+        }
+      });
+      return;
+    } else if (platform === 'darwin') {
       const appleScript = `osascript -e 'POSIX path of (choose file name with prompt "选择导出位置" default name "${defaultName}")'`;
-      const result = execSync(appleScript, { encoding: 'utf-8' }).trim();
-      return result || null;
-    } catch (e) { return null; }
-  }
+      exec(appleScript, { encoding: 'utf-8' }, (error, stdout) => {
+        if (error) {
+          resolve(null);
+        } else {
+          const result = stdout ? stdout.trim() : '';
+          resolve(result || null);
+        }
+      });
+      return;
+    }
 
-  // Linux 或其他平台回退：默认保存到桌面
-  const desktop = path.join(home, 'Desktop');
-  if (fs.existsSync(desktop)) return path.join(desktop, defaultName);
-  return path.join(home, defaultName);
+    // Linux 或其他平台回退：默认保存到桌面
+    const desktop = path.join(home, 'Desktop');
+    if (fs.existsSync(desktop)) {
+      resolve(path.join(desktop, defaultName));
+    } else {
+      resolve(path.join(home, defaultName));
+    }
+  });
 }
 
 // ========== 分发技能到其他 Agent ==========
