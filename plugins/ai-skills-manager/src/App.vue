@@ -24,6 +24,7 @@ declare global {
       importSkillsConfig: (configJson: string, onProgress?: (msg: any) => void) => Promise<{ success: any[]; failed: any[]; skipped: any[] }>
       saveFileDialog: (content: string, defaultName: string) => string
       selectSavePath: (defaultName?: string) => Promise<string | null>
+      migrateLegacyData: () => Promise<void>
       refreshRegistry: () => Promise<Skill[]>
     }
     ztools: any
@@ -105,11 +106,10 @@ const loadSkills = async () => {
 
 onMounted(async () => {
   if (window.preloadAPI) {
+    if (window.preloadAPI.migrateLegacyData) await window.preloadAPI.migrateLegacyData()
     supportedAgents.value = await window.preloadAPI.getSupportedAgents()
-    skills.value = await window.preloadAPI.refreshRegistry()
-  } else {
-    loadSkills()
   }
+  await loadSkills()
   if (window.ztools) {
     isDark.value = window.ztools.isDarkColors()
     // window.ztools.setSubInput((text: string) => { 
@@ -417,12 +417,8 @@ const confirmDistribute = async () => {
 const refreshAll = async () => {
   loading.value = true
   try {
-    if (window.preloadAPI) {
-      skills.value = await window.preloadAPI.refreshRegistry()
-      if (window.ztools) window.ztools.showNotification('审计完成：已同步全机技能状态')
-    } else {
-      await loadSkills()
-    }
+    await loadSkills()
+    if (window.preloadAPI && window.ztools) window.ztools.showNotification('审计完成：已同步全机技能状态')
   } catch (e: any) {
     if (window.ztools) window.ztools.showNotification('刷新失败: ' + e.message)
     else alert('刷新失败: ' + e.message)

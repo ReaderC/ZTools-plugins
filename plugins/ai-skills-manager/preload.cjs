@@ -6,11 +6,14 @@ const path = require('path');
  * 两步安装流程：预览 → 选择 → 安装
  */
 
-const SKILLS_DIR = process.env.USERPROFILE
-  ? path.join(process.env.USERPROFILE, '.gemini', 'antigravity', 'skills')
-  : path.join(process.env.HOME || '/', '.gemini', 'antigravity', 'skills');
+const userHome = process.env.USERPROFILE || process.env.HOME || '/';
+const SKILLS_DIR = path.join(userHome, '.ai-skills-manager');
 
 const REGISTRY_FILE = path.join(SKILLS_DIR, 'registry.json');
+
+// 老版本兼容路径
+const OLD_SKILLS_DIR = path.join(userHome, '.gemini', 'antigravity', 'skills');
+const OLD_REGISTRY_FILE = path.join(OLD_SKILLS_DIR, 'registry.json');
 let MEM_REGISTRY = null; // 内存缓存
 
 // 单例模式获取注册表内容 (带写缓冲/内存同步)
@@ -94,6 +97,31 @@ function ensureRegistry() {
   }
   if (!fs.existsSync(REGISTRY_FILE)) {
     fs.writeFileSync(REGISTRY_FILE, JSON.stringify([]));
+  }
+}
+
+// 迁移老版本记录 (安全且非阻塞版本)
+async function migrateLegacyData() {
+  const fileExists = async (p) => fs.promises.access(p).then(() => true).catch(() => false);
+
+  if (!(await fileExists(OLD_REGISTRY_FILE))) return;
+
+  try {
+    if (!(await fileExists(SKILLS_DIR))) {
+      await fs.promises.mkdir(SKILLS_DIR, { recursive: true });
+    }
+
+    // 只有当目标文件不存在时才执行复制，防止覆盖可能已存在的新版数据
+    if (!(await fileExists(REGISTRY_FILE))) {
+      await fs.promises.copyFile(OLD_REGISTRY_FILE, REGISTRY_FILE);
+    }
+    
+    // 只有在目的地文件确认存在的情况下，才删除旧源文件，确保不丢失原始数据
+    if (await fileExists(REGISTRY_FILE)) {
+      await fs.promises.unlink(OLD_REGISTRY_FILE);
+    }
+  } catch (e) {
+    console.error("数据迁移过程中发生错误:", e);
   }
 }
 
@@ -459,8 +487,9 @@ function constructSpecificUrl(repoUrl, skillPath) {
 // ========== 第一步：预览仓库中的 Skills 列表 ==========
 function previewSkills(repoUrl, onProgress) {
   ensureRegistry();
+  const os = require('os');
   const { gitUrl, subPath } = parseGitHubUrl(repoUrl);
-  const tempDir = path.join(SKILLS_DIR, `_preview_${Date.now()}`);
+  const tempDir = path.join(os.tmpdir(), `ai_skills_preview_${Date.now()}`);
 
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
@@ -617,10 +646,10 @@ function installFromPreview(previewData, selectedSkillNames, targetPaths, repoUr
       }
     }
 
-    if (!keepTemp && tempDir) fs.rm(tempDir, { recursive: true, force: true }, () => {});
+    if (!keepTemp && tempDir) fs.rm(tempDir, { recursive: true, force: true }, () => { });
     return true;
   } catch (err) {
-    if (!keepTemp && tempDir) fs.rm(tempDir, { recursive: true, force: true }, () => {});
+    if (!keepTemp && tempDir) fs.rm(tempDir, { recursive: true, force: true }, () => { });
     throw err;
   }
 }
@@ -628,7 +657,7 @@ function installFromPreview(previewData, selectedSkillNames, targetPaths, repoUr
 // ========== 取消预览，清理临时目录 ==========
 function cancelPreview(tempDir) {
   if (tempDir) {
-    fs.rm(tempDir, { recursive: true, force: true }, () => {});
+    fs.rm(tempDir, { recursive: true, force: true }, () => { });
   }
 }
 
@@ -776,14 +805,14 @@ async function batchDeleteSkills(skillIds) {
 // ========== Shell 辅助 ==========
 function openLocalPath(localPath) {
   if (!localPath) return;
-  
+
   try {
     const { shell } = require('electron');
     if (shell && shell.showItemInFolder) {
       shell.showItemInFolder(localPath);
       return;
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const { spawn } = require('child_process');
   const platform = process.platform;
@@ -803,7 +832,7 @@ function openLocalPath(localPath) {
 
 function openUrl(url) {
   if (!url) return;
-  
+
   // 优先尝试使用 electron 的 shell API (最直接、最安全的系统原生调用)
   try {
     const { shell } = require('electron');
@@ -811,7 +840,7 @@ function openUrl(url) {
       shell.openExternal(url);
       return;
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const { spawn } = require('child_process');
   const platform = process.platform;
@@ -1077,7 +1106,7 @@ function getSupportedAgents() { return AGENT_CONFIGS; }
 window.preloadAPI = {
   getSkillsList, getSupportedAgents, previewSkills, installFromPreview, distributeSkill, cancelPreview,
   openLocalPath, openUrl, selectSavePath, uninstallSkill, updateSkill, batchUpdateSkills, batchDeleteSkills,
-  exportSkillsConfig, importSkillsConfig, saveFileDialog,
+  exportSkillsConfig, importSkillsConfig, saveFileDialog, migrateLegacyData,
   refreshRegistry: async () => { ensureRegistry(); return await getSkillsList(); }
 };
 
