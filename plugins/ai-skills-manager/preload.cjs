@@ -360,9 +360,8 @@ async function getSkillsList() {
 // GitHub 镜像列表（直连失败时自动回退）
 const GITHUB_MIRRORS = [
   '',                          // 直连
-  'https://ghproxy.net/',      // 稳定镜像1（优先）
-  'https://ghps.cc/',          // 稳定镜像2
-  'https://gh-proxy.com/',     // 镜像3
+  'https://gitclone.com/',         // 2. 专用加速 (强烈推荐：专为 git clone 优化，支持缓存)
+  'https://hub.fastgit.xyz/',      // 5. FastGit (速度较快，但偶尔有证书波动)
 ];
 
 // 核心克隆函数，支持镜像回退
