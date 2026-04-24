@@ -124,23 +124,106 @@ async function extractDescription(skillPath) {
   const mdPath_standard = path.join(skillPath, 'SKILL.md');
   const mdPath_lower = path.join(skillPath, 'skill.md');
 
+  const fileExistsAsync = async (p) => fs.promises.access(p).then(() => true).catch(() => false);
   let mdPath = null;
   try {
-    if (fs.existsSync(mdPath_standard)) mdPath = mdPath_standard;
-    else if (fs.existsSync(mdPath_lower)) mdPath = mdPath_lower;
+    if (await fileExistsAsync(mdPath_standard)) mdPath = mdPath_standard;
+    else if (await fileExistsAsync(mdPath_lower)) mdPath = mdPath_lower;
   } catch (e) { }
 
   if (mdPath) {
     try {
-      const content = await fs.promises.readFile(mdPath, 'utf-8');
-      // 增强正则：支持换行外的所有字符，且处理可选的引号
-      const match = content.match(/^description:\s*(.*)/mi);
-      if (match && match[1]) {
-        let desc = match[1].trim();
-        if ((desc.startsWith('"') && desc.endsWith('"')) || (desc.startsWith("'") && desc.endsWith("'"))) {
-          desc = desc.substring(1, desc.length - 1);
+      const readline = require('readline');
+      const fileStream = fs.createReadStream(mdPath, { encoding: 'utf-8' });
+      const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity
+      });
+
+      let inFrontmatter = false;
+      let lineCount = 0;
+      let foundDescriptionMode = null;
+      const block = [];
+      let desc = '';
+
+      try {
+        for await (const line of rl) {
+          lineCount++;
+
+          if (lineCount === 1 && line.match(/^---\s*$/)) {
+            inFrontmatter = true;
+            continue;
+          }
+
+          if (foundDescriptionMode === 'folded' || foundDescriptionMode === 'literal') {
+            if (line.trim() === '') {
+              block.push('');
+            } else if (line.match(/^[ \t]+/)) {
+              block.push(line.trim());
+            } else {
+              rl.close();
+              desc = block.join(foundDescriptionMode === 'folded' ? ' ' : '\n').replace(/ +/g, ' ').trim();
+              if (desc === '{}' || desc === '[]') return '';
+              return desc;
+            }
+          } else if (foundDescriptionMode === 'doublequote') {
+            if (line.endsWith('"')) {
+              block.push(line.substring(0, line.length - 1));
+              rl.close();
+              desc = block.join('\n').trim();
+              if (desc === '{}' || desc === '[]') return '';
+              return desc;
+            }
+            block.push(line);
+          } else if (foundDescriptionMode === 'singlequote') {
+            if (line.endsWith("'")) {
+              block.push(line.substring(0, line.length - 1));
+              rl.close();
+              desc = block.join('\n').trim();
+              if (desc === '{}' || desc === '[]') return '';
+              return desc;
+            }
+            block.push(line);
+          } else {
+            // foundDescriptionMode === null
+            if (inFrontmatter && line.match(/^---\s*$/)) {
+              inFrontmatter = false;
+              break; // Stop parsing after frontmatter closure
+            }
+
+            const match = line.match(/^description:\s*(.*)/i);
+            if (match) {
+              desc = match[1].trim();
+              if (desc === '|' || desc === '>') {
+                foundDescriptionMode = desc === '>' ? 'folded' : 'literal';
+              } else if (desc.startsWith('"') && !desc.endsWith('"')) {
+                foundDescriptionMode = 'doublequote';
+                block.push(desc.substring(1));
+              } else if (desc.startsWith("'") && !desc.endsWith("'")) {
+                foundDescriptionMode = 'singlequote';
+                block.push(desc.substring(1));
+              } else {
+                if ((desc.startsWith('"') && desc.endsWith('"')) || (desc.startsWith("'") && desc.endsWith("'"))) {
+                  desc = desc.substring(1, desc.length - 1);
+                }
+                rl.close();
+                if (desc === '{}' || desc === '[]') return '';
+                return desc;
+              }
+            }
+          }
         }
-        // 如果提取出来的是类似 YAML 的空对象或空数组字符串，忽略它
+      } finally {
+        rl.close();
+        fileStream.destroy();
+      }
+
+      if (foundDescriptionMode === 'folded' || foundDescriptionMode === 'literal') {
+        desc = block.join(foundDescriptionMode === 'folded' ? ' ' : '\n').replace(/ +/g, ' ').trim();
+        if (desc === '{}' || desc === '[]') return '';
+        return desc;
+      } else if (foundDescriptionMode === 'doublequote' || foundDescriptionMode === 'singlequote') {
+        desc = block.join('\n').trim();
         if (desc === '{}' || desc === '[]') return '';
         return desc;
       }
@@ -153,14 +236,15 @@ async function extractDescription(skillPath) {
 async function getSkillsList() {
   const registry = await getRawRegistry();
   const actualSkills = [];
+  const fileExistsAsync = async (p) => fs.promises.access(p).then(() => true).catch(() => false);
 
   // 1. 并发处理已在注册表中的技能
   const registryPromises = registry.map(async (skill) => {
     try {
-      if (fs.existsSync(skill.localPath)) {
+      if (await fileExistsAsync(skill.localPath)) {
         const metaPath = path.join(skill.localPath, 'metadata.json');
 
-        if (fs.existsSync(metaPath)) {
+        if (await fileExistsAsync(metaPath)) {
           try {
             const metaJson = await fs.promises.readFile(metaPath, 'utf-8');
             const meta = JSON.parse(metaJson);
@@ -181,7 +265,8 @@ async function getSkillsList() {
         }
 
         const mdPath = path.join(skill.localPath, 'SKILL.md');
-        const statPath = fs.existsSync(mdPath) ? mdPath : skill.localPath;
+        const mdExists = await fileExistsAsync(mdPath);
+        const statPath = mdExists ? mdPath : skill.localPath;
         const stats = await fs.promises.stat(statPath);
         skill.updatedAt = stats.mtime.toISOString();
 
@@ -201,13 +286,12 @@ async function getSkillsList() {
   const scanPromises = AGENT_CONFIGS.map(async (agentConf) => {
     const p = getPathForAgent(agentConf.id);
     try {
-      if (!fs.existsSync(p)) return [];
+      if (!(await fileExistsAsync(p))) return [];
       const dirents = await fs.promises.readdir(p, { withFileTypes: true });
 
-      const agentSkills = [];
-      for (const dirent of dirents) {
+      const skillPromises = dirents.map(async (dirent) => {
         if (dirent.isDirectory()) {
-          if (dirent.name.startsWith('.') || dirent.name.startsWith('_')) continue;
+          if (dirent.name.startsWith('.') || dirent.name.startsWith('_')) return null;
 
           const skillPath = path.join(p, dirent.name);
           const normSkillPath = normalize(skillPath);
@@ -223,7 +307,7 @@ async function getSkillsList() {
             const metaPath = path.join(skillPath, 'metadata.json');
             const mdPath = path.join(skillPath, 'SKILL.md');
 
-            if (fs.existsSync(metaPath)) {
+            if (await fileExistsAsync(metaPath)) {
               try {
                 const metaJson = await fs.promises.readFile(metaPath, 'utf-8');
                 const meta = JSON.parse(metaJson);
@@ -240,11 +324,12 @@ async function getSkillsList() {
               description = await extractDescription(skillPath);
             }
 
-            const updateStatPath = fs.existsSync(mdPath) ? mdPath : skillPath;
+            const mdExists = await fileExistsAsync(mdPath);
+            const updateStatPath = mdExists ? mdPath : skillPath;
             const updateStats = await fs.promises.stat(updateStatPath);
             const updatedAt = updateStats.mtime.toISOString();
 
-            agentSkills.push({
+            return {
               id: `local_${agentConf.id}_${dirent.name.toLowerCase()}`,
               name: name,
               description: description,
@@ -253,11 +338,14 @@ async function getSkillsList() {
               sourceUrl: sourceUrl,
               installedAt: installedAt,
               updatedAt: updatedAt
-            });
+            };
           }
         }
-      }
-      return agentSkills;
+        return null;
+      });
+
+      const results = await Promise.all(skillPromises);
+      return results.filter(r => r !== null);
     } catch (e) { return []; }
   });
 
