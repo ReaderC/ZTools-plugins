@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
+import { copyFileSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
 
 // 构建完成后把 README.md 复制到 dist/
@@ -34,13 +34,7 @@ function stripDevConfig() {
       // 同时删除 preload 的 package.json / package-lock.json（发布不需要）
       rmSync(resolve(__dirname, 'dist/preload/package.json'), { force: true })
       rmSync(resolve(__dirname, 'dist/preload/package-lock.json'), { force: true })
-
-      // 确保 dist/preload/vendor 存在（public/ 下的 vendor 由 Vite 自动复制）
-      const vendorSrc = resolve(__dirname, 'public/preload/vendor')
-      const vendorDst = resolve(__dirname, 'dist/preload/vendor')
-      mkdirSync(resolve(vendorDst, 'dist'), { recursive: true })
-      copyFileSync(resolve(vendorSrc, 'xlsx.js'),         resolve(vendorDst, 'xlsx.js'))
-      copyFileSync(resolve(vendorSrc, 'dist/cpexcel.js'), resolve(vendorDst, 'dist/cpexcel.js'))
+      // vendor/ 由 Vite 自动从 public/ 复制到 dist/，无需手动处理
     }
   }
 }
