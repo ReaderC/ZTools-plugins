@@ -570,25 +570,6 @@
       ]
     },
     {
-      "code": "randomQq",
-      "explain": "生成随机 QQ 号",
-      "icon": "logo.svg",
-      "cmds": [
-        "qq",
-        "qq号"
-      ]
-    },
-    {
-      "code": "randomWechat",
-      "explain": "生成随机微信号",
-      "icon": "logo.svg",
-      "cmds": [
-        "wechat",
-        "wx",
-        "微信号"
-      ]
-    },
-    {
       "code": "randomSku",
       "explain": "生成随机商品编码",
       "icon": "logo.svg",

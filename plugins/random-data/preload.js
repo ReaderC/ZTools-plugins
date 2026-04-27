@@ -98,7 +98,8 @@ function createUuid32() {
 
 function createAddress() {
   const area = pick(areas)
-  return `${area.province}${area.city}${area.district}${pick(roads)}${randomInt(1, 999)}号${pick(buildings)}${randomInt(1, 28)}栋${randomInt(101, 3202)}室`
+  const city = area.province === area.city ? '' : area.city
+  return `${area.province}${city}${area.district}${pick(roads)}${randomInt(1, 999)}号${pick(buildings)}${randomInt(1, 28)}栋${randomInt(101, 3202)}室`
 }
 
 function createIdCard() {
@@ -242,7 +243,8 @@ function createNonsense(length) {
     text += pick(['，', '。'])
   }
 
-  return text.slice(0, length)
+  const result = text.slice(0, length)
+  return /[，。]$/.test(result) ? result : `${result.slice(0, length - 1)}。`
 }
 
 function createOrderNo() {
@@ -252,6 +254,10 @@ function createOrderNo() {
 
 function createCoordinate() {
   return `${(Math.random() * 180 - 90).toFixed(6)}, ${(Math.random() * 360 - 180).toFixed(6)}`
+}
+
+function createMoney() {
+  return (Math.random() * 999999 + 1).toFixed(2)
 }
 
 function createEnglishName() {
@@ -267,7 +273,17 @@ function createFileName() {
 }
 
 function createBase64() {
-  return btoa(`${pick(words)}:${randomDigits(12)}:${Date.now()}`)
+  const text = `${pick(words)}:${randomDigits(12)}:${Date.now()}`
+
+  if (typeof btoa === 'function') {
+    return btoa(text)
+  }
+
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(text).toString('base64')
+  }
+
+  return text
 }
 
 function createHex(length) {
@@ -291,7 +307,7 @@ function createJson() {
     name: createName(),
     phone: createPhone(),
     email: createEmail(),
-    amount: Number(randomInt(1, 999999).toFixed(2)),
+    amount: createMoney(),
     enabled: Math.random() < 0.5
   })
 }
@@ -323,10 +339,6 @@ function createRgb() {
   return `rgb(${randomInt(0, 255)}, ${randomInt(0, 255)}, ${randomInt(0, 255)})`
 }
 
-function createWechat() {
-  return `${pick(words)}_${randomInt(1000, 999999)}`
-}
-
 function createSku() {
   return `SKU-${pick(words).toUpperCase()}-${randomInt(100000, 999999)}`
 }
@@ -335,25 +347,31 @@ function createChineseWord() {
   return `${pick(chineseWords)}${pick(chineseWords)}`
 }
 
-function complete(text, label) {
-  if (typeof window.ztools.hideMainWindowPasteText === 'function') {
-    window.ztools.hideMainWindowPasteText(text)
-  } else {
-    window.ztools.copyText(text)
-    window.ztools.hideMainWindow()
-    window.ztools.simulateKeyboardTap('v', 'command')
+async function complete(text) {
+  if (typeof window.ztools.hideMainWindowTypeString === 'function') {
+    window.ztools.hideMainWindowTypeString(text)
+    window.ztools.outPlugin()
+    return
+  }
+
+  if (typeof window.ztools.sendInputEvent === 'function') {
+    await window.ztools.hideMainWindow(true)
+
+    for (const char of text) {
+      window.ztools.sendInputEvent({ type: 'char', keyCode: char })
+    }
   }
 
   window.ztools.outPlugin()
 }
 
-function createHandler(label, creator) {
+function createHandler(creator) {
   return {
     mode: 'none',
     args: {
-      enter() {
+      async enter() {
         const text = creator()
-        complete(text, label)
+        await complete(text)
         return { success: true, data: text }
       }
     }
@@ -361,65 +379,63 @@ function createHandler(label, creator) {
 }
 
 window.exports = {
-  randomName: createHandler('姓名', createName),
-  randomPhone: createHandler('手机号', createPhone),
-  randomUuid: createHandler('UUID', createUuid),
-  randomUuid32: createHandler('无横杠 UUID', createUuid32),
-  randomAddress: createHandler('地址', createAddress),
-  randomIdCard: createHandler('身份证号', createIdCard),
-  randomBankCard: createHandler('银行卡号', createBankCard),
-  randomEmail: createHandler('邮箱', createEmail),
-  randomUsername: createHandler('用户名', createUsername),
-  randomPassword: createHandler('密码', createPassword),
-  randomDate: createHandler('日期', () => formatDate(createDate(-3650, 3650), false)),
-  randomDateTime: createHandler('日期时间', () => formatDate(createDate(-3650, 3650), true)),
-  randomTimestamp: createHandler('时间戳', () => String(createDate(-3650, 3650).getTime())),
-  randomUrl: createHandler('URL', createUrl),
-  randomIp: createHandler('IPv4', createIp),
-  randomIpv6: createHandler('IPv6', createIpv6),
-  randomMac: createHandler('MAC 地址', createMac),
-  randomCompany: createHandler('公司名', createCompany),
-  randomJob: createHandler('职位', () => pick(jobs)),
-  randomPlate: createHandler('车牌号', createPlate),
-  randomPostcode: createHandler('邮编', () => randomDigits(6)),
-  randomColor: createHandler('颜色', createColor),
-  randomNumber: createHandler('数字', () => String(randomInt(0, 1000000))),
-  randomMoney: createHandler('金额', () => randomInt(1, 999999).toFixed(2)),
-  randomBoolean: createHandler('布尔值', () => String(Math.random() < 0.5)),
-  randomBooleanUpper: createHandler('大写布尔值', () => String(Math.random() < 0.5).toUpperCase()),
-  randomBooleanNumber: createHandler('布尔数字', () => String(randomInt(0, 1))),
-  randomInteger: createHandler('整数', () => String(randomInt(-1000000, 1000000))),
-  randomDecimal: createHandler('小数', () => (Math.random() * 100000).toFixed(4)),
-  randomNegativeNumber: createHandler('负数', () => String(-randomInt(1, 1000000))),
-  randomPercentage: createHandler('百分比', () => `${(Math.random() * 100).toFixed(2)}%`),
-  randomSentence: createHandler('短句', createSentence),
-  randomParagraph: createHandler('段落', createParagraph),
-  randomNonsense100: createHandler('100 字废话', () => createNonsense(100)),
-  randomNonsense200: createHandler('200 字废话', () => createNonsense(200)),
-  randomNonsense300: createHandler('300 字废话', () => createNonsense(300)),
-  randomNonsense500: createHandler('500 字废话', () => createNonsense(500)),
-  randomOrderNo: createHandler('订单号', createOrderNo),
-  randomCoordinate: createHandler('经纬度', createCoordinate),
-  randomEnglishName: createHandler('英文名', createEnglishName),
-  randomAge: createHandler('年龄', () => String(randomInt(1, 99))),
-  randomGender: createHandler('性别', () => pick(['男', '女', '未知'])),
-  randomDomain: createHandler('域名', createDomain),
-  randomFileName: createHandler('文件名', createFileName),
-  randomMime: createHandler('MIME 类型', () => pick(mimeTypes)),
-  randomBase64: createHandler('Base64', createBase64),
-  randomToken: createHandler('Token', createToken),
-  randomMd5: createHandler('MD5', () => createHex(32)),
-  randomSha1: createHandler('SHA1', () => createHex(40)),
-  randomSha256: createHandler('SHA256', () => createHex(64)),
-  randomJson: createHandler('JSON', createJson),
-  randomCsv: createHandler('CSV', createCsv),
-  randomCron: createHandler('Cron 表达式', createCron),
-  randomVersion: createHandler('版本号', createVersion),
-  randomUserAgent: createHandler('User-Agent', createUserAgent),
-  randomRgb: createHandler('RGB 颜色', createRgb),
-  randomEmoji: createHandler('表情', () => pick(emojis)),
-  randomQq: createHandler('QQ 号', () => String(randomInt(10000, 9999999999))),
-  randomWechat: createHandler('微信号', createWechat),
-  randomSku: createHandler('商品编码', createSku),
-  randomChineseWord: createHandler('中文词语', createChineseWord)
+  randomName: createHandler(createName),
+  randomPhone: createHandler(createPhone),
+  randomUuid: createHandler(createUuid),
+  randomUuid32: createHandler(createUuid32),
+  randomAddress: createHandler(createAddress),
+  randomIdCard: createHandler(createIdCard),
+  randomBankCard: createHandler(createBankCard),
+  randomEmail: createHandler(createEmail),
+  randomUsername: createHandler(createUsername),
+  randomPassword: createHandler(createPassword),
+  randomDate: createHandler(() => formatDate(createDate(-3650, 3650), false)),
+  randomDateTime: createHandler(() => formatDate(createDate(-3650, 3650), true)),
+  randomTimestamp: createHandler(() => String(createDate(-3650, 3650).getTime())),
+  randomUrl: createHandler(createUrl),
+  randomIp: createHandler(createIp),
+  randomIpv6: createHandler(createIpv6),
+  randomMac: createHandler(createMac),
+  randomCompany: createHandler(createCompany),
+  randomJob: createHandler(() => pick(jobs)),
+  randomPlate: createHandler(createPlate),
+  randomPostcode: createHandler(() => randomDigits(6)),
+  randomColor: createHandler(createColor),
+  randomNumber: createHandler(() => String(randomInt(0, 1000000))),
+  randomMoney: createHandler(createMoney),
+  randomBoolean: createHandler(() => String(Math.random() < 0.5)),
+  randomBooleanUpper: createHandler(() => String(Math.random() < 0.5).toUpperCase()),
+  randomBooleanNumber: createHandler(() => String(randomInt(0, 1))),
+  randomInteger: createHandler(() => String(randomInt(-1000000, 1000000))),
+  randomDecimal: createHandler(() => (Math.random() * 100000).toFixed(4)),
+  randomNegativeNumber: createHandler(() => String(-randomInt(1, 1000000))),
+  randomPercentage: createHandler(() => `${(Math.random() * 100).toFixed(2)}%`),
+  randomSentence: createHandler(createSentence),
+  randomParagraph: createHandler(createParagraph),
+  randomNonsense100: createHandler(() => createNonsense(100)),
+  randomNonsense200: createHandler(() => createNonsense(200)),
+  randomNonsense300: createHandler(() => createNonsense(300)),
+  randomNonsense500: createHandler(() => createNonsense(500)),
+  randomOrderNo: createHandler(createOrderNo),
+  randomCoordinate: createHandler(createCoordinate),
+  randomEnglishName: createHandler(createEnglishName),
+  randomAge: createHandler(() => String(randomInt(1, 99))),
+  randomGender: createHandler(() => pick(['男', '女', '未知'])),
+  randomDomain: createHandler(createDomain),
+  randomFileName: createHandler(createFileName),
+  randomMime: createHandler(() => pick(mimeTypes)),
+  randomBase64: createHandler(createBase64),
+  randomToken: createHandler(createToken),
+  randomMd5: createHandler(() => createHex(32)),
+  randomSha1: createHandler(() => createHex(40)),
+  randomSha256: createHandler(() => createHex(64)),
+  randomJson: createHandler(createJson),
+  randomCsv: createHandler(createCsv),
+  randomCron: createHandler(createCron),
+  randomVersion: createHandler(createVersion),
+  randomUserAgent: createHandler(createUserAgent),
+  randomRgb: createHandler(createRgb),
+  randomEmoji: createHandler(() => pick(emojis)),
+  randomSku: createHandler(createSku),
+  randomChineseWord: createHandler(createChineseWord)
 }
