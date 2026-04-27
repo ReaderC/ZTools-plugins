@@ -4,7 +4,7 @@
   "title": "SQLMate",
   "description": "SQL 数据处理工具集 — 合并、拆分、去重、脱敏、DDL对比等，数据不离本地",
   "author": "rhymed.liu",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.html",
   "preload": "preload/services.js",
   "logo": "logo.png",
@@ -81,6 +81,13 @@
       "icon": "logo.png",
       "cmds": ["语句改写", "INSERT转UPDATE", "sqlmate convert",
         { "type": "files", "fileType": "file", "extensions": ["sql"], "label": "语句改写" }]
+    },
+    {
+      "code": "format",
+      "explain": "SQL 格式化美化 / 压缩为单行",
+      "icon": "logo.png",
+      "cmds": ["SQL格式化", "格式化SQL", "SQL压缩", "压缩SQL", "sqlmate format",
+        { "type": "files", "fileType": "file", "extensions": ["sql", "txt"], "label": "SQL格式化" }]
     },
     {
       "code": "sqltoCsv",
