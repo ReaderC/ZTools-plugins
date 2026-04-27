@@ -7,6 +7,7 @@ import { timestampPlugin } from './timestamp';
 import { cleanNamePlugin } from './clean-name';
 import { extensionTransformPlugin } from './extension-transform';
 import { uniqueifyPlugin } from './uniqueify';
+import { deleteCharPlugin } from './delete-char';
 
 /**
  * 聚合所有内置插件以进行集中导出。
@@ -21,5 +22,6 @@ export const builtInPlugins = [
   timestampPlugin,
   cleanNamePlugin,
   extensionTransformPlugin,
-  uniqueifyPlugin
+  uniqueifyPlugin,
+  deleteCharPlugin
 ];

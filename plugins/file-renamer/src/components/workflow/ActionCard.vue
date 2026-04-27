@@ -82,6 +82,27 @@ function isTemplateField(fieldKey: unknown): boolean {
   return props.action.pluginId === 'template' && String(fieldKey) === 'template'
 }
 
+const DELETE_CHAR_MODE_DEPENDENCIES: Record<string, string[]> = {
+  chars: ['mode', 'chars', 'caseSensitive'],
+  type: ['mode', 'type'],
+  position: ['mode', 'position', 'count'],
+  dedupe: ['mode', 'style', 'targetChar']
+}
+
+function shouldShowField(fieldKey: string): boolean {
+  if (props.action.pluginId !== 'delete-char') return true
+  const currentMode = props.action.config?.mode ?? 'chars'
+  const deps = DELETE_CHAR_MODE_DEPENDENCIES[currentMode]
+  if (!deps) return true
+  if (!deps.includes(fieldKey)) return false
+
+  if (fieldKey === 'count' && currentMode === 'position') {
+    const position = props.action.config?.position
+    return position === 'firstN' || position === 'lastN' || position === 'nth'
+  }
+  return true
+}
+
 function appendTemplateToken(fieldKey: unknown, token: string) {
   const key = String(fieldKey)
   const currentValue = String(props.action.config[key] ?? '')
@@ -130,13 +151,16 @@ function appendTemplateToken(fieldKey: unknown, token: string) {
         </div>
 
         <div class="space-y-3">
-          <div v-for="(schema, key) in plugin?.configSchema" :key="key">
+          <template v-for="(schema, key) in plugin?.configSchema" :key="key">
+            <div v-if="shouldShowField(String(key))">
             <label class="text-[10px] font-bold text-muted-foreground uppercase mb-1 block px-1 tracking-wider">
               {{ getSchemaLabel(key, schema) }}
             </label>
 
             <FRInput v-if="schema.type === 'string' || schema.type === 'number'" v-model="action.config[key]"
               :type="schema.type"
+              :min="schema.min"
+              :max="schema.max"
               class="h-8 text-xs bg-muted/20 focus:bg-background border-muted-foreground/10 transition-colors" />
 
             <div v-if="schema.type === 'string' && isTemplateField(key)" class="mt-1.5 flex flex-wrap gap-1.5 px-1">
@@ -169,7 +193,8 @@ function appendTemplateToken(fieldKey: unknown, token: string) {
               class="mt-1 px-1 text-[10px] text-muted-foreground/85 leading-relaxed">
               {{ getSchemaDescription(key, schema) }}
             </p>
-          </div>
+            </div>
+          </template>
         </div>
       </template>
     </div>

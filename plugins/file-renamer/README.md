@@ -19,6 +19,7 @@
 | **模板** | 使用模板变量自定义命名 | `{name}_{date}.{ext}` |
 | **时间戳** | 添加文件创建/修改时间戳 | `doc.pdf` → `doc_2024-01-15.pdf` |
 | **清理名称** | 移除特殊字符和空格 | `my file#1.txt` → `myfile1.txt` |
+| **删除字符** | 按字符、类型、位置或去重删除 | `file name.txt` → `filename.txt` |
 | **扩展名转换** | 批量更改文件扩展名 | `photo.jpeg` → `photo.jpg` |
 | **去重** | 自动处理重复文件名 | `file.txt`, `file.txt` → `file.txt`, `file_1.txt` |
 
@@ -55,6 +56,7 @@
 │   │   ├── template.ts     # 模板
 │   │   ├── timestamp.ts    # 时间戳
 │   │   ├── clean-name.ts   # 清理名称
+│   │   ├── delete-char.ts  # 删除字符
 │   │   ├── extension-transform.ts # 扩展名转换
 │   │   └── uniqueify.ts    # 去重
 │   ├── components/          # Vue 组件
@@ -77,13 +79,13 @@
 ### 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 开发模式
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 开发服务器将在 `http://localhost:5173` 启动。ZTools 会自动加载开发版本。
@@ -91,7 +93,7 @@ npm run dev
 ### 构建生产版本
 
 ```bash
-npm run build
+pnpm build
 ```
 
 构建产物将输出到 `dist/` 目录。
@@ -113,6 +115,7 @@ npm run build
 - **模板**：使用变量自定义命名格式
 - **时间戳**：选择时间格式和位置
 - **清理名称**：设置清理选项
+- **删除字符**：选择删除模式（字符/类型/位置/去重）并配置参数
 - **扩展名转换**：输入新的扩展名
 - **去重**：选择冲突处理方式
 
