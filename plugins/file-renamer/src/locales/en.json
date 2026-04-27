@@ -239,6 +239,71 @@
           "description": "When disabled, File and file are treated as duplicates."
         }
       }
+    },
+    "delete-char": {
+      "name": "Delete Character",
+      "description": "Delete specific characters from file names.",
+      "fields": {
+        "mode": {
+          "label": "Mode",
+          "description": "Choose deletion mode.",
+          "options": {
+            "chars": "Delete Specific Characters",
+            "type": "Delete by Type",
+            "position": "Delete by Position",
+            "dedupe": "Remove Duplicates"
+          }
+        },
+        "chars": {
+          "label": "Characters",
+          "description": "Characters to delete."
+        },
+        "caseSensitive": {
+          "label": "Case Sensitive",
+          "description": "Match case when disabled."
+        },
+        "type": {
+          "label": "Type",
+          "description": "Character type to delete.",
+          "options": {
+            "space": "Space",
+            "alpha": "Letter",
+            "digit": "Digit",
+            "upper": "Uppercase",
+            "lower": "Lowercase",
+            "punct": "Punctuation",
+            "chinese": "Chinese",
+            "non-ascii": "Non-ASCII"
+          }
+        },
+        "position": {
+          "label": "Position",
+          "description": "Position to delete from.",
+          "options": {
+            "first": "First",
+            "last": "Last",
+            "firstN": "First N",
+            "lastN": "Last N",
+            "nth": "Nth Character"
+          }
+        },
+        "count": {
+          "label": "Count",
+          "description": "Number of characters to delete."
+        },
+        "style": {
+          "label": "Style",
+          "description": "Deduplication style.",
+          "options": {
+            "adjacent": "Adjacent",
+            "all": "All"
+          }
+        },
+        "targetChar": {
+          "label": "Target Character",
+          "description": "Leave empty to apply to all."
+        }
+      }
     }
   },
   "common": {

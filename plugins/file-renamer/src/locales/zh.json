@@ -239,6 +239,71 @@
           "description": "关闭后会把 File 和 file 视为同名。"
         }
       }
+    },
+    "delete-char": {
+      "name": "删除字符",
+      "description": "从文件名中删除指定字符。",
+      "fields": {
+        "mode": {
+          "label": "模式",
+          "description": "选择删除模式。",
+          "options": {
+            "chars": "删除指定字符",
+            "type": "按类型删除",
+            "position": "按位置删除",
+            "dedupe": "去除重复"
+          }
+        },
+        "chars": {
+          "label": "字符",
+          "description": "要删除的字符。"
+        },
+        "caseSensitive": {
+          "label": "区分大小写",
+          "description": "关闭时忽略大小写差异。"
+        },
+        "type": {
+          "label": "类型",
+          "description": "要删除的字符类型。",
+          "options": {
+            "space": "空格",
+            "alpha": "字母",
+            "digit": "数字",
+            "upper": "大写字母",
+            "lower": "小写字母",
+            "punct": "标点符号",
+            "chinese": "中文",
+            "non-ascii": "非ASCII字符"
+          }
+        },
+        "position": {
+          "label": "位置",
+          "description": "从指定位置开始删除。",
+          "options": {
+            "first": "首字符",
+            "last": "尾字符",
+            "firstN": "前N个",
+            "lastN": "后N个",
+            "nth": "第N个"
+          }
+        },
+        "count": {
+          "label": "数量",
+          "description": "要删除的字符数量。"
+        },
+        "style": {
+          "label": "去重方式",
+          "description": "重复字符的处理方式。",
+          "options": {
+            "adjacent": "连续重复",
+            "all": "全部重复"
+          }
+        },
+        "targetChar": {
+          "label": "目标字符",
+          "description": "留空则对所有字符生效。"
+        }
+      }
     }
   },
   "common": {
