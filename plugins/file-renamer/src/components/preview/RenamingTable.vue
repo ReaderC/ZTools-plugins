@@ -27,6 +27,7 @@ import {
   FileAudio,
   FileCode2,
   FileArchive,
+  Folder,
   CheckCircle2,
   AlertCircle,
   Clock,
@@ -91,8 +92,9 @@ function formatDateFull(timestamp: number) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-function getFileTypeLabel(ext: string) {
-  const e = (ext || '').toLowerCase()
+function getFileTypeLabel(file: FileItem) {
+  if (file.isDirectory) return 'FOLDER'
+  const e = (file.extension || '').toLowerCase()
   if (e === 'jpg' || e === 'jpeg') return 'JPEG'
   if (e === 'png') return 'PNG'
   if (e === 'pdf') return 'PDF'
@@ -100,11 +102,12 @@ function getFileTypeLabel(ext: string) {
   if (e === 'docx') return 'DOCX'
   if (e === 'mp4') return 'MP4'
   if (e === 'zip') return 'ZIP'
-  return (ext || 'FILE').toUpperCase()
+  return (file.extension || 'FILE').toUpperCase()
 }
 
-function getFileIcon(ext: string) {
-  const e = (ext || '').toLowerCase()
+function getFileIcon(file: FileItem) {
+  if (file.isDirectory) return Folder
+  const e = (file.extension || '').toLowerCase()
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(e)) return FileImage
   if (['mp4', 'mov', 'avi', 'mkv'].includes(e)) return FileVideo
   if (['mp3', 'wav', 'ogg', 'flac'].includes(e)) return FileAudio
@@ -310,8 +313,8 @@ function canRevert(file: FileItem) {
             <FRTableCell class="py-2.5 px-3 overflow-hidden">
               <div class="flex min-w-0 items-center gap-3">
                 <div
-                  :class="cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md border', getFileIconTone(file.extension))">
-                  <component :is="getFileIcon(file.extension)" class="h-4 w-4" />
+                  :class="cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-md border', file.isDirectory ? 'bg-amber-soft text-amber-foreground border-amber-soft/30' : getFileIconTone(file.extension))">
+                  <component :is="getFileIcon(file)" class="h-4 w-4" />
                 </div>
                 <FROverflowTooltipText :text="file.originalName" class="min-w-0"
                   text-class="text-[13px] font-medium text-foreground" />
@@ -325,8 +328,8 @@ function canRevert(file: FileItem) {
             <!-- 文件类型列 -->
             <FRTableCell class="hidden 2xl:table-cell py-2.5 px-2 whitespace-nowrap">
               <span
-                :class="cn('inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', getTypeBadgeTone(file.extension))">
-                {{ getFileTypeLabel(file.extension) }}
+                :class="cn('inline-flex rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide', file.isDirectory ? 'bg-amber-soft/70 text-amber-foreground border-amber-soft/30' : getTypeBadgeTone(file.extension))">
+                {{ getFileTypeLabel(file) }}
               </span>
             </FRTableCell>
             <!-- 文件大小列 -->

@@ -9,6 +9,8 @@ import {
 /**
  * 用于从文件名中删除特定字符的插件。
  * 支持多种删除模式：按字符、按类型、按位置、去重。
+ * 所有删除操作均基于 Unicode 字素簇（grapheme cluster），
+ * 以确保 emoji、组合字符等复杂字符被正确处理。
  */
 export const deleteCharPlugin: PluginActionDefinition = {
   id: 'delete-char',
@@ -54,9 +56,9 @@ export const deleteCharPlugin: PluginActionDefinition = {
     },
     /**
      * 要删除的字符类型（模式为 type 时使用）：
-     * - space: 空格
-     * - alpha: 字母
-     * - digit: 数字
+     * - space: 空白字符（含全角空格、制表符等）
+     * - alpha: 字母（含所有 Unicode 字母）
+     * - digit: 数字（含所有 Unicode 数字）
      * - upper: 大写字母
      * - lower: 小写字母
      * - punct: 标点符号
@@ -134,10 +136,21 @@ export const deleteCharPlugin: PluginActionDefinition = {
       label: pluginFieldLabel('delete-char', 'targetChar', 'Target Character'),
       default: '',
       description: pluginFieldDescription('delete-char', 'targetChar', 'Leave empty to apply to all.')
+    },
+    /**
+     * 是否保护文件扩展名
+     * 启用时，扩展名部分不会被删除
+     */
+    protectExtension: {
+      type: 'boolean',
+      label: pluginFieldLabel('delete-char', 'protectExtension', 'Protect Extension'),
+      default: true,
+      description: pluginFieldDescription('delete-char', 'protectExtension', 'Do not delete characters in file extension.')
     }
   },
   /**
    * 根据配置删除文件名中的字符。
+   * 所有操作基于 Unicode 字素簇，保证 emoji、组合字符等不被截断。
    * @param currentName - 要处理的当前文件名
    * @param config - 删除选项配置
    * @param config.mode - 删除模式：chars | type | position | dedupe
@@ -148,109 +161,173 @@ export const deleteCharPlugin: PluginActionDefinition = {
    * @param config.count - 删除数量
    * @param config.style - 去重风格（mode为dedupe时使用）
    * @param config.targetChar - 目标字符（mode为dedupe时使用）
+   * @param config.protectExtension - 是否保护文件扩展名（默认true）
    * @returns 处理后的文件名
    */
   apply: (currentName: string, config: any) => {
-    const { mode } = config;
+    const { mode, protectExtension = true } = config;
+
+    const splitNameAndExt = (name: string): { name: string; ext: string } => {
+      const lastDot = name.lastIndexOf('.');
+      if (lastDot <= 0) {
+        return { name, ext: '' };
+      }
+      return { name: name.slice(0, lastDot), ext: name.slice(lastDot) };
+    };
+
+    const { name: nameWithoutExt, ext } = splitNameAndExt(currentName);
+
+    const splitGraphemes = (value: string): string[] => {
+      if (!value) return [];
+
+      if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
+        const segmenter = new (Intl as any).Segmenter(undefined, { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(value), (part: any) => part.segment);
+      }
+
+      return Array.from(value);
+    };
+
+    const normalizeCompareKey = (value: string, caseSensitive: boolean): string => {
+      const normalized = value.normalize('NFC');
+      return caseSensitive ? normalized : normalized.toLowerCase();
+    };
+
+    const removeSpecificChars = (value: string, chars: string, caseSensitive: boolean): string => {
+      const targets = splitGraphemes(chars);
+      if (!targets.length) return value;
+
+      const targetSet = new Set(targets.map(char => normalizeCompareKey(char, caseSensitive)));
+
+      return splitGraphemes(value)
+        .filter(char => !targetSet.has(normalizeCompareKey(char, caseSensitive)))
+        .join('');
+    };
+
+    const removeByType = (value: string, type: string): string => {
+      const typeRegexMap: Record<string, RegExp> = {
+        space: /\p{White_Space}/gu,
+        alpha: /\p{L}/gu,
+        digit: /\p{Nd}/gu,
+        upper: /\p{Lu}/gu,
+        lower: /\p{Ll}/gu,
+        punct: /\p{P}/gu,
+        chinese: /\p{Script=Han}/gu,
+        'non-ascii': /\P{ASCII}/gu
+      };
+
+      return value.replace(typeRegexMap[type] ?? typeRegexMap.space, '');
+    };
+
+    const removeByPosition = (value: string, position: string, count: number): string => {
+      const graphemes = splitGraphemes(value);
+      const len = graphemes.length;
+
+      if (count <= 0) return value;
+
+      switch (position) {
+        case 'first':
+          return graphemes.slice(1).join('');
+        case 'last':
+          return graphemes.slice(0, -1).join('');
+        case 'firstN':
+          return graphemes.slice(Math.min(count, len)).join('');
+        case 'lastN':
+          return graphemes.slice(0, -Math.min(count, len)).join('');
+        case 'nth':
+          if (count < 1 || count > len) return value;
+          return graphemes.filter((_, index) => index !== count - 1).join('');
+        default:
+          return value;
+      }
+    };
+
+    const dedupeChars = (value: string, style: string, targetChar: string): string => {
+      const graphemes = splitGraphemes(value);
+      const targetGraphemes = splitGraphemes(targetChar);
+      const target = targetGraphemes[0];
+      const targetKey = target ? normalizeCompareKey(target, false) : '';
+
+      if (!target) {
+        if (style === 'adjacent') {
+          const result: string[] = [];
+          for (const grapheme of graphemes) {
+            if (result[result.length - 1] !== grapheme) {
+              result.push(grapheme);
+            }
+          }
+          return result.join('');
+        }
+
+        const seen = new Set<string>();
+        return graphemes
+          .filter(grapheme => {
+            if (seen.has(grapheme)) return false;
+            seen.add(grapheme);
+            return true;
+          })
+          .join('');
+      }
+
+      if (style === 'adjacent') {
+        const result: string[] = [];
+        let previousKey = '';
+        for (const grapheme of graphemes) {
+          const key = normalizeCompareKey(grapheme, false);
+          if (key !== targetKey || previousKey !== targetKey) {
+            result.push(grapheme);
+          }
+          previousKey = key;
+        }
+        return result.join('');
+      }
+
+      let seenTarget = false;
+      return graphemes
+        .filter(grapheme => {
+          const key = normalizeCompareKey(grapheme, false);
+          if (key !== targetKey) return true;
+          if (seenTarget) return false;
+          seenTarget = true;
+          return true;
+        })
+        .join('');
+    };
+
+    const targetName = protectExtension ? nameWithoutExt : currentName;
+
+    let result: string;
 
     switch (mode) {
-      /**
-       * 模式：按指定字符删除
-       * 从文件名中移除所有指定的字符
-       */
       case 'chars': {
         const { chars, caseSensitive } = config;
         if (!chars) return currentName;
-        if (caseSensitive) {
-          return currentName.split(chars).join('');
-        } else {
-          const regex = new RegExp(`[${chars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`, 'gi');
-          return currentName.replace(regex, '');
-        }
+        result = removeSpecificChars(targetName, chars, !!caseSensitive);
+        break;
       }
 
-      /**
-       * 模式：按字符类型删除
-       * 根据Unicode属性匹配并删除指定类型的字符
-       */
       case 'type': {
         const { type } = config;
-        const typeMap: Record<string, string> = {
-          'space': ' ',
-          'alpha': 'a-zA-Z',
-          'digit': '0-9',
-          'upper': 'A-Z',
-          'lower': 'a-z',
-          'punct': '\\p{P}',
-          'chinese': '\\u4e00-\\u9fff',
-          'non-ascii': '\\x80-\\uffff'
-        };
-        const pattern = typeMap[type] || ' ';
-        const regex = new RegExp(`[${pattern}]`, 'g');
-        return currentName.replace(regex, '');
+        result = removeByType(targetName, type);
+        break;
       }
 
-      /**
-       * 模式：按位置删除
-       * 从文件名的不同位置移除字符
-       */
       case 'position': {
         const { position, count = 1 } = config;
-        const name = currentName;
-        const len = name.length;
-
-        if (count <= 0) return name;
-
-        switch (position) {
-          case 'first':
-            return name.slice(1);
-          case 'last':
-            return name.slice(0, -1);
-          case 'firstN':
-            return name.slice(count);
-          case 'lastN':
-            return name.slice(0, -count);
-          case 'nth':
-            if (count < 1 || count > len) return name;
-            return name.slice(0, count - 1) + name.slice(count);
-          default:
-            return name;
-        }
+        result = removeByPosition(targetName, position, count);
+        break;
       }
 
-      /**
-       * 模式：移除重复字符
-       * 合并或移除字符串中重复出现的字符
-       */
       case 'dedupe': {
         const { style, targetChar } = config;
-        if (!targetChar) {
-          if (style === 'adjacent') {
-            return currentName.replace(/(.)\1+/g, '$1');
-          } else {
-            const seen = new Set();
-            return currentName
-              .split('')
-              .filter(c => {
-                if (seen.has(c)) return false;
-                seen.add(c);
-                return true;
-              })
-              .join('');
-          }
-        } else {
-          const escaped = targetChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          if (style === 'adjacent') {
-            const regex = new RegExp(`(${escaped})\\1+`, 'g');
-            return currentName.replace(regex, targetChar);
-          } else {
-            return currentName.split(targetChar).join('');
-          }
-        }
+        result = dedupeChars(targetName, style, targetChar);
+        break;
       }
 
       default:
         return currentName;
     }
+
+    return protectExtension ? `${result}${ext}` : result;
   }
 };

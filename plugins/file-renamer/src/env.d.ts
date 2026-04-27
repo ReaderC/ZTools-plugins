@@ -41,6 +41,13 @@ interface Services {
     ctimeMs: number
     birthtimeMs: number
   }>
+  /**
+   * Gets the local absolute path for a File object obtained from a drag-drop event.
+   * Uses Electron's webUtils.getPathForFile() (replaces the deprecated File.path).
+   * @param file - File object from DragEvent.dataTransfer
+   * @returns Absolute local path string
+   */
+  getPathForFile: (file: File) => string
 }
 
 /**
@@ -50,6 +57,18 @@ declare global {
   interface Window {
     /** Services exposed by the preload script */
     services: Services
+    /** ZTools API */
+    ztools: {
+      showOpenDialog: (options: {
+        title?: string
+        defaultPath?: string
+        buttonLabel?: string
+        filters?: { name: string, extensions: string[] }[]
+        properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles' | 'createDirectory' | 'promptToCreate' | 'noResolveAliases' | 'treatPackageAsDirectory' | 'dontAddToRecent'>
+        message?: string
+        securityScopedBookmarks?: boolean
+      }) => string[] | undefined
+    }
   }
 }
 

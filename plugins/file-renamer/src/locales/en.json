@@ -9,6 +9,7 @@
     "drag_import_desc": "Supports files and folders",
     "start_rename": "Run Process",
     "import_files": "Import Files",
+    "import_folders": "Import Folders",
     "clear_all": "Clear List",
     "beginner_guide": "Beginner Guide",
     "settings": "Settings",
@@ -289,7 +290,10 @@
         },
         "count": {
           "label": "Count",
-          "description": "Number of characters to delete."
+          "description": "Number of characters to delete.",
+          "options": {
+            "nth": "Position (1-indexed)"
+          }
         },
         "style": {
           "label": "Style",
@@ -302,6 +306,10 @@
         "targetChar": {
           "label": "Target Character",
           "description": "Leave empty to apply to all."
+        },
+        "protectExtension": {
+          "label": "Protect Extension",
+          "description": "Do not delete characters in file extension."
         }
       }
     }

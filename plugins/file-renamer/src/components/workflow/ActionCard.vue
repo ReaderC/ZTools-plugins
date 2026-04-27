@@ -83,10 +83,10 @@ function isTemplateField(fieldKey: unknown): boolean {
 }
 
 const DELETE_CHAR_MODE_DEPENDENCIES: Record<string, string[]> = {
-  chars: ['mode', 'chars', 'caseSensitive'],
-  type: ['mode', 'type'],
-  position: ['mode', 'position', 'count'],
-  dedupe: ['mode', 'style', 'targetChar']
+  chars: ['mode', 'chars', 'caseSensitive', 'protectExtension'],
+  type: ['mode', 'type', 'protectExtension'],
+  position: ['mode', 'position', 'count', 'protectExtension'],
+  dedupe: ['mode', 'style', 'targetChar', 'protectExtension']
 }
 
 function shouldShowField(fieldKey: string): boolean {
@@ -107,6 +107,14 @@ function appendTemplateToken(fieldKey: unknown, token: string) {
   const key = String(fieldKey)
   const currentValue = String(props.action.config[key] ?? '')
   props.action.config[key] = `${currentValue}${token}`
+}
+
+function getCountFieldLabel(position: string): string {
+  if (position === 'nth') {
+    const key = `plugins.${props.action.pluginId}.fields.count.options.nth`
+    return te(key) ? t(key) : 'Position (1-indexed)'
+  }
+  return getSchemaLabel('count', plugin.value?.configSchema?.count)
 }
 </script>
 
@@ -154,7 +162,7 @@ function appendTemplateToken(fieldKey: unknown, token: string) {
           <template v-for="(schema, key) in plugin?.configSchema" :key="key">
             <div v-if="shouldShowField(String(key))">
             <label class="text-[10px] font-bold text-muted-foreground uppercase mb-1 block px-1 tracking-wider">
-              {{ getSchemaLabel(key, schema) }}
+              {{ String(key) === 'count' ? getCountFieldLabel(action.config.position) : getSchemaLabel(key, schema) }}
             </label>
 
             <FRInput v-if="schema.type === 'string' || schema.type === 'number'" v-model="action.config[key]"

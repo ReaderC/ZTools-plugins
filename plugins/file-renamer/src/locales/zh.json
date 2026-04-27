@@ -9,6 +9,7 @@
     "drag_import_desc": "支持拖入文件或文件夹",
     "start_rename": "批量处理",
     "import_files": "导入文件",
+    "import_folders": "导入文件夹",
     "clear_all": "清空列表",
     "beginner_guide": "新手引导",
     "settings": "设置",
@@ -289,7 +290,10 @@
         },
         "count": {
           "label": "数量",
-          "description": "要删除的字符数量。"
+          "description": "要删除的字符数量。",
+          "options": {
+            "nth": "位置（从1开始）"
+          }
         },
         "style": {
           "label": "去重方式",
@@ -302,6 +306,10 @@
         "targetChar": {
           "label": "目标字符",
           "description": "留空则对所有字符生效。"
+        },
+        "protectExtension": {
+          "label": "保护扩展名",
+          "description": "启用后不会删除文件扩展名中的字符。"
         }
       }
     }

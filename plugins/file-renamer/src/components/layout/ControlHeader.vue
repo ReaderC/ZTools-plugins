@@ -3,10 +3,9 @@
  * 顶部操作栏组件。
  * @description 提供应用的主要操作入口，包括文件导入、设置访问、新手引导和批量操作功能
  */
-import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FRButton, FRTooltip } from '@/components/ui'
-import { FilePlus2, Trash2, Settings, Play, Undo2, Sparkles } from 'lucide-vue-next'
+import { FilePlus2, FolderPlus, Trash2, Settings, Play, Undo2, Sparkles } from 'lucide-vue-next'
 
 const { t } = useI18n()
 
@@ -17,7 +16,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'show-settings'): void
-  (e: 'import-files', files: FileList): void
   (e: 'import-paths', filePaths: string[]): void
   (e: 'clear-files'): void
   (e: 'run'): void
@@ -26,9 +24,7 @@ const emit = defineEmits<{
   (e: 'start-guide'): void
 }>()
 
-const fileInputRef = ref<HTMLInputElement | null>(null)
-
-function triggerImport() {
+function importFiles() {
   if (typeof window.ztools?.showOpenDialog === 'function') {
     const selectedPaths = window.ztools.showOpenDialog({
       title: t('app.import_files'),
@@ -37,18 +33,20 @@ function triggerImport() {
 
     if (selectedPaths?.length) {
       emit('import-paths', selectedPaths)
-      return
     }
   }
-
-  fileInputRef.value?.click()
 }
 
-function onFileChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  if (input.files) {
-    emit('import-files', input.files)
-    input.value = ''
+function importFolders() {
+  if (typeof window.ztools?.showOpenDialog === 'function') {
+    const selectedPaths = window.ztools.showOpenDialog({
+      title: t('app.import_folders'),
+      properties: ['openDirectory', 'multiSelections']
+    })
+
+    if (selectedPaths?.length) {
+      emit('import-paths', selectedPaths)
+    }
   }
 }
 </script>
@@ -63,13 +61,23 @@ function onFileChange(e: Event) {
             id="onboarding-import-btn"
             type="button"
             class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-xs font-bold h-9 px-3 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all cursor-pointer shadow-lg shadow-primary/20 gap-2 active:scale-95"
-            @click="triggerImport"
+            @click="importFiles"
           >
             <FilePlus2 class="w-3.5 h-3.5" />
             <span class="hidden sm:inline">{{ t('app.import_files') }}</span>
           </button>
         </FRTooltip>
-        <input ref="fileInputRef" type="file" multiple class="hidden" @change="onFileChange" />
+
+        <FRTooltip :content="t('app.import_folders')">
+          <button
+            type="button"
+            class="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-xs font-bold h-9 px-3 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all cursor-pointer gap-2 active:scale-95"
+            @click="importFolders"
+          >
+            <FolderPlus class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">{{ t('app.import_folders') }}</span>
+          </button>
+        </FRTooltip>
 
         <FRTooltip :content="t('app.clear_all')">
           <FRButton variant="outline" size="sm" class="gap-1.5 h-9 px-3 rounded-lg" @click="$emit('clear-files')">

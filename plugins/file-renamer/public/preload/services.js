@@ -1,4 +1,5 @@
 const fs = require('node:fs')
+const { webUtils } = require('electron')
 
 // 通过 window 对象向渲染进程注入 nodejs 能力
 window.services = {
@@ -34,5 +35,9 @@ window.services = {
         })
       })
     })
+  },
+  // 获取拖拽 File 对象的本地绝对路径（Electron 22+ 废弃 File.path，改用 webUtils）
+  getPathForFile(file) {
+    return webUtils.getPathForFile(file)
   }
 }

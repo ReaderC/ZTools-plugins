@@ -345,6 +345,23 @@ const readAllEntries = async (reader: FileSystemDirectoryReaderLike): Promise<Fi
   return allEntries
 }
 
+/**
+ * 尝试通过 window.services.getPathForFile 获取 File 对象的绝对路径。
+ * Electron 22+ 废弃了 File.path，官方替代方案是 webUtils.getPathForFile()。
+ */
+const getFilePath = (file: File): string => {
+  try {
+    const svc = (window as any).services
+    if (typeof svc?.getPathForFile === 'function') {
+      return svc.getPathForFile(file) || ''
+    }
+  } catch {
+    // ignore
+  }
+  // 降级：尝试旧版 Electron 的 File.path
+  return ((file as any).path || '').trim()
+}
+
 const readEntryFiles = async (entry: FileSystemEntryLike): Promise<ImportedFile[]> => {
   if ('isFile' in entry && entry.isFile) {
     return new Promise<ImportedFile[]>((resolve) => {
@@ -463,7 +480,7 @@ const appendImportedFiles = (importedFiles: ImportedFile[]) => {
   if (!importedFiles.length) return
 
   const newFiles: FileItem[] = importedFiles.map((f) => {
-    const rawPath = (f.path || '').trim()
+    const rawPath = getFilePath(f)
     const fallbackPath = (f.webkitRelativePath || f.name).trim()
     const resolvedPath = rawPath || fallbackPath
     const hasAbsolutePath = isAbsoluteFilePath(rawPath)
