@@ -2,9 +2,9 @@
   "$schema": "node_modules/@ztools-center/ztools-api-types/resource/ztools.schema.json",
   "name": "devbox",
   "title": "开发百宝箱",
-  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音等实用工具",
+  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音、HTML预览等实用工具",
   "author": "CafeBabe",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "main": "index.html",
   "preload": "preload/services.js",
   "logo": "logo.png",
@@ -59,6 +59,12 @@
       "explain": "生成二维码或将二维码图片解码为文字，支持文件上传、截图和粘贴",
       "icon": "logo.png",
       "cmds": ["二维码", "qrcode", "qr", "生成二维码", "解码二维码", "扫码", "QR码"]
+    },
+    {
+      "code": "htmlpreview",
+      "explain": "粘贴或输入 HTML 代码，实时预览渲染效果，支持导出 HTML 文件",
+      "icon": "logo.png",
+      "cmds": ["html", "HTML", "预览", "html预览", "HTML预览", "htmlpreview", "网页预览"]
     }
   ]
 }

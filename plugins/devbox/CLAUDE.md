@@ -34,8 +34,10 @@ src/
 │   ├── RandomPassword/index.vue  # 随机密码生成（可配置长度/字符集/强度）
 │   ├── RandomNumber/index.vue    # 范围随机数（可配置数量/小数位）
 │   ├── UUID/index.vue            # UUID v4 生成
-│   └── RandomColor/index.vue     # HSL 随机颜色（滑块/多格式复制/历史记录）
-│   └── Signature/index.vue       # 加密签名生成（MD5/SHA/HMAC）
+│   ├── RandomColor/index.vue     # HSL 随机颜色（滑块/多格式复制/历史记录）
+│   ├── Signature/index.vue       # 加密签名生成（MD5/SHA/HMAC）
+│   ├── Pinyin/index.vue          # 中文转拼音（驼峰/下划线/常量等命名格式）
+│   └── Qrcode/index.vue          # 二维码生成与解码（支持文件上传/截图/粘贴）
 public/
 ├── plugin.json                # 插件清单（必须编辑此文件，根目录的是旧副本）
 ├── logo.png                   # 插件图标
@@ -56,6 +58,19 @@ public/
 2. 在 `src/toolbox/tools.ts` 的 `categories` 数组中注册（导入组件，定义 code/explain/icon）
 3. 在 `public/plugin.json` 的 features 数组中添加匹配条目（code + cmds）
 4. 如需 Node.js 能力，在 `public/preload/services.js` 添加方法，通过 `window.services` 调用
+5. **同步更新以下文件**（详见"发布检查清单"）：
+   - `public/plugin.json` → 更新 `version` 和 `description`
+   - `package.json` → 同步更新 `version`（与 plugin.json 保持一致）
+   - `README.md` → 更新工具列表（简要列出工具名和触发指令即可，无需详细功能描述）
+
+### 发布检查清单
+
+每次新增工具或修改功能后，**必须**完成以下同步更新：
+
+1. **版本号**：`public/plugin.json` 的 `version` 和 `package.json` 的 `version` 同步递增（遵循 semver：新功能 minor +1，修复 patch +1）
+2. **插件描述**：`public/plugin.json` 的 `description` 更新为包含新工具的概要描述
+3. **README.md**：在"工具列表"章节简要补充新工具（工具名 + 触发指令，2-3 行即可，不需要详细功能说明）
+4. **插件名称**：一般不需要改动，仅当工具集定位发生重大变化时才更新 `name` / `title`
 
 ### Plugin Manifest (`public/plugin.json`)
 

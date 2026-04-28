@@ -7,6 +7,7 @@ import RandomColor from '../tools/RandomColor/index.vue'
 import Signature from '../tools/Signature/index.vue'
 import Pinyin from '../tools/Pinyin/index.vue'
 import Qrcode from '../tools/Qrcode/index.vue'
+import HTMLPreview from '../tools/HTMLPreview/index.vue'
 
 export interface Tool {
   code: string
@@ -45,6 +46,7 @@ export const categories: Category[] = [
     code: 'text',
     tools: [
       { code: 'pinyin', explain: '中文转拼音命名', icon: '', component: Pinyin },
+      { code: 'htmlpreview', explain: 'HTML预览', icon: '', component: HTMLPreview },
     ]
   },
   {

@@ -1,6 +1,6 @@
 # 开发百宝箱 (devbox)
 
-一款集成在 ZTools 中的实用工具箱，提供随机身份、密码、数字、UUID、颜色、加密签名、中文转拼音等多种生成工具。
+一款集成在 ZTools 中的实用工具箱，提供随机身份、密码、数字、UUID、颜色、加密签名、中文转拼音、HTML预览等多种生成工具。
 
 ![项目预览](./index.png)
 
@@ -98,6 +98,19 @@
 
 ---
 
+### HTML 预览
+**触发指令**: `html` / `HTML预览` / `网页预览` / `htmlpreview`
+
+实时预览 HTML 代码的渲染效果。
+
+**功能**:
+- 粘贴或输入 HTML 代码
+- 实时预览渲染结果（300ms 防抖）
+- 从剪贴板一键粘贴
+- 导出为 HTML 文件
+
+---
+
 ## 使用方式
 
 1. 在 ZTools 搜索栏输入上述任意触发指令
@@ -126,7 +139,8 @@ src/
 │   ├── UUID/                # UUID 生成
 │   ├── RandomColor/         # 随机颜色
 │   ├── Signature/           # 加密签名
-│   └── Pinyin/             # 中文转拼音
+│   ├── Pinyin/             # 中文转拼音
+│   └── HTMLPreview/         # HTML 预览
 ├── toolbox/
 │   ├── ToolboxLayout.vue   # 布局组件
 │   └── tools.ts            # 工具注册表

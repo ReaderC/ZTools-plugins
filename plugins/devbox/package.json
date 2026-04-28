@@ -1,7 +1,7 @@
 {
   "name": "myPlugins",
-  "version": "1.0.0",
-  "description": "生成虚拟的随机身份信息，用于测试场景",
+  "version": "2.2.0",
+  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音、HTML预览等实用工具",
   "type": "module",
   "scripts": {
     "dev": "vite",
