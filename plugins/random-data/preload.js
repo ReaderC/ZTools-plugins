@@ -1074,6 +1074,32 @@ function complete(text) {
     return Promise.resolve();
   }
 
+  if (
+    window.ztools &&
+    window.ztools.clipboard &&
+    typeof window.ztools.clipboard.writeContent === "function" &&
+    typeof window.ztools.hideMainWindow === "function" &&
+    typeof window.ztools.simulateKeyboardTap === "function"
+  ) {
+    return window.ztools.hideMainWindow(true).then(async () => {
+      await window.ztools.clipboard.writeContent(
+        {
+          type: "text",
+          content: text,
+        },
+        false,
+      );
+
+      if (window.ztools.isMacOs && window.ztools.isMacOs()) {
+        window.ztools.simulateKeyboardTap("v", "command");
+      } else {
+        window.ztools.simulateKeyboardTap("v", "control");
+      }
+
+      window.ztools.outPlugin();
+    });
+  }
+
   if (typeof window.ztools.sendInputEvent === "function") {
     return window.ztools.hideMainWindow(true).then(() => {
       for (const char of text) {

@@ -312,6 +312,31 @@
         border-top: 1px dashed var(--line);
       }
 
+      .preview-box-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .preview-copy {
+        min-height: 24px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      .preview-copy:hover {
+        border-color: var(--line-strong);
+        color: var(--text);
+      }
+
       .preview-box pre {
         margin: 0;
         white-space: pre-wrap;
@@ -375,9 +400,11 @@
         items: [],
         previews: {},
         conflicts: {},
-        saving: false
+        saving: false,
+        pendingSave: false
       }
       let autoSaveTimer = 0
+      let focusState = null
 
       function applyTheme() {
         const dark = Boolean(window.ztools && typeof window.ztools.isDarkColors === 'function' && window.ztools.isDarkColors())
@@ -420,7 +447,42 @@
         const enabledCount = state.items.filter(item => item.enabled).length
         enabledCountElement.textContent = `${enabledCount} / ${state.items.length} 已开启`
         saveButton.classList.toggle('is-saving', state.saving)
-        saveButton.textContent = state.saving ? '保存中…' : '已自动保存'
+        saveButton.textContent = state.saving ? '保存中…' : state.pendingSave ? '等待保存…' : '已自动保存'
+      }
+
+      function rememberInputFocus(input) {
+        if (!(input instanceof HTMLInputElement)) {
+          focusState = null
+          return
+        }
+
+        const row = input.closest('[data-code]')
+        focusState = row ? {
+          code: row.dataset.code || '',
+          value: input.value,
+          shouldRestore: true
+        } : null
+      }
+
+      function restoreInputFocus() {
+        if (!focusState) {
+          return
+        }
+
+        const input = listElement.querySelector(
+          `[data-code="${focusState.code}"] .chip-input[data-action="add-command"]`
+        )
+
+        if (!(input instanceof HTMLInputElement)) {
+          focusState = null
+          return
+        }
+
+        input.focus()
+        input.value = focusState.value
+        const length = input.value.length
+        input.setSelectionRange(length, length)
+        focusState.shouldRestore = false
       }
 
       function updateConflicts() {
@@ -476,12 +538,43 @@
 
         return `
           <div class="preview-box">
+            <div class="preview-box-head">
+              <span class="switch-copy">已生成</span>
+              <button type="button" class="preview-copy" data-action="copy-preview">复制</button>
+            </div>
             <pre>${escapeHtml(state.previews[item.code])}</pre>
           </div>
         `
       }
 
+      async function copyPreviewText(text) {
+        if (!text) {
+          return
+        }
+
+        if (window.ztools && typeof window.ztools.copyText === 'function') {
+          const result = window.ztools.copyText(text)
+
+          if (result !== false) {
+            showNotification('已复制')
+            return
+          }
+        }
+
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          await navigator.clipboard.writeText(text)
+          showNotification('已复制')
+        }
+      }
+
       function renderList() {
+        const activeElement = document.activeElement
+        if (activeElement instanceof HTMLInputElement && activeElement.dataset.action === 'add-command') {
+          rememberInputFocus(activeElement)
+        } else if (focusState && focusState.shouldRestore !== true) {
+          focusState = null
+        }
+
         if (state.items.length === 0) {
           listElement.innerHTML = '<section class="empty">当前没有可配置项目。</section>'
           renderSummary()
@@ -514,6 +607,9 @@
           </section>
         `).join('')}`
         renderSummary()
+        if (focusState && focusState.shouldRestore) {
+          restoreInputFocus()
+        }
       }
 
       function normalizeCommand(value) {
@@ -521,6 +617,9 @@
       }
 
       function scheduleAutoSave() {
+        state.pendingSave = true
+        renderSummary()
+
         if (autoSaveTimer) {
           clearTimeout(autoSaveTimer)
         }
@@ -588,11 +687,17 @@
       }
 
       async function handleSave() {
-        if (!api || state.saving) {
+        if (!api) {
+          return
+        }
+
+        if (state.saving) {
+          state.pendingSave = true
           return
         }
 
         state.saving = true
+        state.pendingSave = false
         renderSummary()
 
         try {
@@ -608,6 +713,10 @@
         } finally {
           state.saving = false
           renderSummary()
+
+          if (state.pendingSave) {
+            scheduleAutoSave()
+          }
         }
       }
 
@@ -649,6 +758,7 @@
           const code = row ? row.dataset.code : ''
 
           if (code) {
+            rememberInputFocus(target)
             addCommand(code, target.value, target)
           }
         }
@@ -658,6 +768,7 @@
           const item = row ? findItem(row.dataset.code) : null
 
           if (item && item.commands.length > 0) {
+            rememberInputFocus(target)
             item.commands.pop()
             renderList()
             scheduleAutoSave()
@@ -672,12 +783,20 @@
           return
         }
 
-        const row = target.closest('[data-code]')
-        const code = row ? row.dataset.code : ''
+        const relatedTarget = event.relatedTarget instanceof Element ? event.relatedTarget : null
 
-        if (code) {
-          addCommand(code, target.value, target)
+        if (relatedTarget && relatedTarget.closest('[data-action="sample"], [data-action="remove-command"]')) {
+          return
         }
+
+        window.setTimeout(() => {
+          const row = target.closest('[data-code]')
+          const code = row ? row.dataset.code : ''
+
+          if (code) {
+            addCommand(code, target.value, target)
+          }
+        }, 0)
       }, true)
 
       listElement.addEventListener('click', event => {
@@ -701,6 +820,21 @@
         }
 
         const previewButton = target.closest('[data-action="sample"]')
+
+        const copyButton = target.closest('[data-action="copy-preview"]')
+
+        if (copyButton) {
+          const row = copyButton.closest('[data-code]')
+          const code = row ? row.dataset.code : ''
+          const text = code ? state.previews[code] : ''
+
+          if (text) {
+            copyPreviewText(text).catch((error) => {
+              showNotification(`复制失败：${error && error.message ? error.message : '未知错误'}`)
+            })
+          }
+          return
+        }
 
         if (!previewButton) {
           return
