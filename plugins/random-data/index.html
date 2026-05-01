@@ -54,6 +54,41 @@
         padding: 10px 0 14px;
       }
 
+      .tabs {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 8px;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .tab-button {
+        flex: 1;
+        height: 30px;
+        padding: 0 14px;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 160ms ease, color 160ms ease;
+      }
+
+      .tab-button.is-active {
+        background: var(--panel-strong);
+        color: var(--accent-strong);
+      }
+
+      .tab-button:hover:not(.is-active) {
+        color: var(--text);
+      }
+
       .toolbar {
         display: flex;
         align-items: center;
@@ -83,6 +118,54 @@
         white-space: nowrap;
       }
 
+      .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        flex-shrink: 0;
+      }
+
+      .segmented {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: var(--panel-strong);
+      }
+
+      .segmented button {
+        height: 26px;
+        min-width: 44px;
+        padding: 0 12px;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 160ms ease, color 160ms ease, opacity 160ms ease;
+      }
+
+      .segmented button:hover:not([disabled]) {
+        background: var(--panel);
+      }
+
+      .segmented button[disabled] {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .segmented-divider {
+        width: 1px;
+        height: 14px;
+        background: var(--line);
+      }
+
       .save-button {
         min-height: 32px;
         padding: 0 12px;
@@ -99,6 +182,36 @@
 
       .save-button.is-saving {
         border-color: var(--accent);
+      }
+
+      .panel[hidden] {
+        display: none;
+      }
+
+      .custom-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 8px;
+      }
+
+      .add-button {
+        min-height: 32px;
+        padding: 0 14px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 12px;
+        background: transparent;
+        color: var(--accent-strong);
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color 160ms ease, background 160ms ease;
+      }
+
+      .add-button:hover {
+        border-style: solid;
+        border-color: var(--accent);
+        background: var(--panel);
       }
 
       .list {
@@ -124,7 +237,8 @@
 
       .item.is-disabled .preview-button,
       .item.is-disabled .chip-input,
-      .item.is-disabled .command-chip {
+      .item.is-disabled .command-chip,
+      .item.is-disabled .content-input {
         opacity: 0.82;
       }
 
@@ -141,6 +255,10 @@
         margin-top: 8px;
       }
 
+      .content-row {
+        align-items: flex-start;
+      }
+
       .item-title {
         min-width: 0;
         font-size: 14px;
@@ -149,6 +267,59 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .content-input {
+        flex: 1;
+        min-width: 0;
+        min-height: 32px;
+        max-height: 140px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel-strong);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        line-height: 1.45;
+        resize: vertical;
+        outline: none;
+      }
+
+      .content-input:focus {
+        border-color: var(--accent);
+      }
+
+      .content-input::placeholder {
+        color: var(--muted);
+      }
+
+      .row-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .delete-button {
+        flex-shrink: 0;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 16px;
+        line-height: 1;
+        cursor: pointer;
+        transition: color 160ms ease, border-color 160ms ease;
+      }
+
+      .delete-button:hover {
+        color: var(--danger);
+        border-color: color-mix(in oklch, var(--danger) 40%, var(--line));
       }
 
       .switch {
@@ -382,27 +553,66 @@
   </head>
   <body>
     <div class="shell">
+      <div class="tabs" role="tablist">
+        <button class="tab-button is-active" type="button" data-tab="builtin" role="tab" aria-selected="true">内置数据</button>
+        <button class="tab-button" type="button" data-tab="custom" role="tab" aria-selected="false">自定义</button>
+      </div>
       <header class="toolbar">
         <div class="summary">
           <h1>随机数据设置</h1>
           <span id="enabledCount">0 / 0 已开启</span>
         </div>
-        <button id="saveButton" class="save-button" type="button" disabled>配置已保存</button>
+        <div class="toolbar-actions">
+          <div class="segmented" role="group" aria-label="批量开关">
+            <button id="enableAllButton" type="button">全开</button>
+            <span class="segmented-divider" aria-hidden="true"></span>
+            <button id="disableAllButton" type="button">全关</button>
+          </div>
+          <button id="saveButton" class="save-button" type="button" disabled>已自动保存</button>
+        </div>
       </header>
-      <main id="list" class="list"></main>
+      <main>
+        <section id="builtinPanel" class="panel" data-tab-panel="builtin">
+          <div id="builtinList" class="list"></div>
+        </section>
+        <section id="customPanel" class="panel" data-tab-panel="custom" hidden>
+          <div class="custom-toolbar">
+            <button id="addCustomButton" class="add-button" type="button">+ 新增自定义项</button>
+          </div>
+          <div id="customList" class="list"></div>
+        </section>
+      </main>
     </div>
     <script>
-      const api = window.randomDataApi
-      const listElement = document.getElementById('list')
+      const builtinApi = window.randomDataApi
+      const customApi = window.customFillApi
+      const tabsContainer = document.querySelector('.tabs')
+      const tabButtons = Array.from(document.querySelectorAll('.tab-button'))
+      const builtinPanel = document.getElementById('builtinPanel')
+      const customPanel = document.getElementById('customPanel')
+      const builtinListElement = document.getElementById('builtinList')
+      const customListElement = document.getElementById('customList')
       const enabledCountElement = document.getElementById('enabledCount')
       const saveButton = document.getElementById('saveButton')
+      const enableAllButton = document.getElementById('enableAllButton')
+      const disableAllButton = document.getElementById('disableAllButton')
+      const addCustomButton = document.getElementById('addCustomButton')
+
       const state = {
-        items: [],
-        previews: {},
-        conflicts: {},
+        activeTab: 'builtin',
+        builtin: {
+          items: [],
+          previews: {},
+          conflicts: {}
+        },
+        custom: {
+          items: []
+        },
         saving: false,
-        pendingSave: false
+        pendingSave: false,
+        dirty: { builtin: false, custom: false }
       }
+
       let autoSaveTimer = 0
       let focusState = null
 
@@ -432,33 +642,77 @@
           .replace(/'/g, '&#39;')
       }
 
-      function decorateItems(items) {
+      function decorateBuiltinItems(items) {
         return items.map(item => ({
           ...item,
           commands: Array.isArray(item.commands) ? item.commands.slice() : []
         }))
       }
 
-      function findItem(code) {
-        return state.items.find(item => item.code === code)
+      function decorateCustomItems(items) {
+        return items.map(item => ({
+          id: item.id,
+          enabled: item.enabled !== false,
+          content: typeof item.content === 'string' ? item.content : '',
+          commands: Array.isArray(item.commands) ? item.commands.slice() : []
+        }))
+      }
+
+      function findBuiltinItem(code) {
+        return state.builtin.items.find(item => item.code === code)
+      }
+
+      function findCustomItem(id) {
+        return state.custom.items.find(item => item.id === id)
+      }
+
+      function activeItems() {
+        return state.activeTab === 'builtin' ? state.builtin.items : state.custom.items
+      }
+
+      function normalizeCommand(value) {
+        return String(value || '').trim()
+      }
+
+      function bulkSetEnabled(enabled) {
+        const items = activeItems()
+        let changed = false
+
+        for (const item of items) {
+          if (item.enabled !== enabled) {
+            item.enabled = enabled
+            changed = true
+          }
+        }
+
+        if (!changed) {
+          return
+        }
+
+        renderActiveList()
+        scheduleAutoSave(state.activeTab)
       }
 
       function renderSummary() {
-        const enabledCount = state.items.filter(item => item.enabled).length
-        enabledCountElement.textContent = `${enabledCount} / ${state.items.length} 已开启`
+        const items = activeItems()
+        const enabledCount = items.filter(item => item.enabled).length
+        const total = items.length
+        enabledCountElement.textContent = `${enabledCount} / ${total} 已开启`
+
         saveButton.classList.toggle('is-saving', state.saving)
         saveButton.textContent = state.saving ? '保存中…' : state.pendingSave ? '等待保存…' : '已自动保存'
       }
 
       function rememberInputFocus(input) {
-        if (!(input instanceof HTMLInputElement)) {
+        if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) {
           focusState = null
           return
         }
 
-        const row = input.closest('[data-code]')
+        const row = input.closest('[data-key]')
         focusState = row ? {
-          code: row.dataset.code || '',
+          key: row.dataset.key || '',
+          action: input.dataset.action || '',
           value: input.value,
           shouldRestore: true
         } : null
@@ -469,26 +723,39 @@
           return
         }
 
-        const input = listElement.querySelector(
-          `[data-code="${focusState.code}"] .chip-input[data-action="add-command"]`
-        )
+        const selector = `[data-key="${focusState.key}"] [data-action="${focusState.action}"]`
+        const input = document.querySelector(selector)
 
-        if (!(input instanceof HTMLInputElement)) {
+        if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) {
           focusState = null
           return
         }
 
         input.focus()
-        input.value = focusState.value
+        if (input.value !== focusState.value) {
+          input.value = focusState.value
+        }
         const length = input.value.length
-        input.setSelectionRange(length, length)
+        if (typeof input.setSelectionRange === 'function') {
+          input.setSelectionRange(length, length)
+        }
         focusState.shouldRestore = false
       }
 
-      function updateConflicts() {
+      function captureFocus() {
+        const activeElement = document.activeElement
+        if ((activeElement instanceof HTMLInputElement && activeElement.dataset.action === 'add-command')
+          || (activeElement instanceof HTMLTextAreaElement && activeElement.dataset.action === 'content')) {
+          rememberInputFocus(activeElement)
+        } else if (focusState && focusState.shouldRestore !== true) {
+          focusState = null
+        }
+      }
+
+      function updateBuiltinConflicts() {
         const commandMap = {}
 
-        for (const item of state.items) {
+        for (const item of state.builtin.items) {
           if (item.enabled === false) {
             continue
           }
@@ -516,12 +783,12 @@
           }
         }
 
-        state.conflicts = conflicts
+        state.builtin.conflicts = conflicts
       }
 
-      function renderCommands(item) {
-        const chips = item.commands.map(command => `
-          <div class="command-chip${state.conflicts[command] ? ' is-conflict' : ''}">
+      function renderCommandChips(commands, conflicts) {
+        const chips = commands.map(command => `
+          <div class="command-chip${conflicts && conflicts[command] ? ' is-conflict' : ''}">
             <span>${escapeHtml(command)}</span>
             <button type="button" class="chip-remove" data-action="remove-command" data-command="${escapeHtml(command)}">×</button>
           </div>
@@ -531,8 +798,8 @@
         return chips.join('')
       }
 
-      function renderPreview(item) {
-        if (Object.prototype.hasOwnProperty.call(state.previews, item.code) === false) {
+      function renderPreview(code) {
+        if (Object.prototype.hasOwnProperty.call(state.builtin.previews, code) === false) {
           return ''
         }
 
@@ -542,7 +809,7 @@
               <span class="switch-copy">已生成</span>
               <button type="button" class="preview-copy" data-action="copy-preview">复制</button>
             </div>
-            <pre>${escapeHtml(state.previews[item.code])}</pre>
+            <pre>${escapeHtml(state.builtin.previews[code])}</pre>
           </div>
         `
       }
@@ -567,30 +834,25 @@
         }
       }
 
-      function renderList() {
-        const activeElement = document.activeElement
-        if (activeElement instanceof HTMLInputElement && activeElement.dataset.action === 'add-command') {
-          rememberInputFocus(activeElement)
-        } else if (focusState && focusState.shouldRestore !== true) {
-          focusState = null
-        }
+      function renderBuiltinList() {
+        captureFocus()
 
-        if (state.items.length === 0) {
-          listElement.innerHTML = '<section class="empty">当前没有可配置项目。</section>'
-          renderSummary()
+        if (state.builtin.items.length === 0) {
+          builtinListElement.innerHTML = '<section class="empty">当前没有可配置项目。</section>'
           return
         }
 
-        updateConflicts()
-        const conflictEntries = Object.entries(state.conflicts)
+        updateBuiltinConflicts()
+        const conflicts = state.builtin.conflicts
+        const conflictEntries = Object.entries(conflicts)
         const conflictBar = conflictEntries.length > 0 ? `
           <section class="conflict-bar">
             以下指令存在冲突：${conflictEntries.map(([command, names]) => `${escapeHtml(command)}（${escapeHtml(names.join('、'))}）`).join('；')}
           </section>
         ` : ''
 
-        listElement.innerHTML = `${conflictBar}${state.items.map((item, index) => `
-          <section class="item${item.enabled ? '' : ' is-disabled'}" data-code="${escapeHtml(item.code)}" style="--index:${index}">
+        builtinListElement.innerHTML = `${conflictBar}${state.builtin.items.map((item, index) => `
+          <section class="item${item.enabled ? '' : ' is-disabled'}" data-key="b:${escapeHtml(item.code)}" data-code="${escapeHtml(item.code)}" style="--index:${index}">
             <div class="item-row">
               <div class="item-title">${escapeHtml(item.explain)}</div>
               <label class="switch">
@@ -600,23 +862,83 @@
               </label>
             </div>
             <div class="item-row command-area">
-              <div class="command-stack">${renderCommands(item)}</div>
+              <div class="command-stack">${renderCommandChips(item.commands, conflicts)}</div>
               <button type="button" class="preview-button" data-action="sample">生成数据</button>
             </div>
-            ${renderPreview(item)}
+            ${renderPreview(item.code)}
           </section>
         `).join('')}`
-        renderSummary()
+
         if (focusState && focusState.shouldRestore) {
           restoreInputFocus()
         }
       }
 
-      function normalizeCommand(value) {
-        return String(value || '').trim()
+      function renderCustomList() {
+        captureFocus()
+
+        if (state.custom.items.length === 0) {
+          customListElement.innerHTML = '<section class="empty">还没有自定义填充项。点上方的「+ 新增自定义项」开始。</section>'
+          return
+        }
+
+        customListElement.innerHTML = state.custom.items.map((item, index) => `
+          <section class="item${item.enabled ? '' : ' is-disabled'}" data-key="c:${escapeHtml(item.id)}" data-id="${escapeHtml(item.id)}" style="--index:${index}">
+            <div class="item-row content-row">
+              <textarea class="content-input" data-action="content" rows="1" placeholder="触发时填入的内容…">${escapeHtml(item.content)}</textarea>
+              <div class="row-actions">
+                <label class="switch">
+                  <input type="checkbox" data-action="enabled" ${item.enabled ? 'checked' : ''}>
+                  <span class="switch-ui"></span>
+                  <span class="switch-copy">${item.enabled ? '开启' : '关闭'}</span>
+                </label>
+                <button type="button" class="delete-button" data-action="delete-custom" title="删除此项">×</button>
+              </div>
+            </div>
+            <div class="item-row command-area">
+              <div class="command-stack">${renderCommandChips(item.commands, null)}</div>
+            </div>
+          </section>
+        `).join('')
+
+        if (focusState && focusState.shouldRestore) {
+          restoreInputFocus()
+        }
       }
 
-      function scheduleAutoSave() {
+      function renderActiveList() {
+        if (state.activeTab === 'builtin') {
+          renderBuiltinList()
+        } else {
+          renderCustomList()
+        }
+        renderSummary()
+      }
+
+      function switchTab(tab) {
+        if (state.activeTab === tab) {
+          return
+        }
+
+        state.activeTab = tab
+        focusState = null
+
+        for (const button of tabButtons) {
+          const matched = button.dataset.tab === tab
+          button.classList.toggle('is-active', matched)
+          button.setAttribute('aria-selected', String(matched))
+        }
+
+        builtinPanel.hidden = tab !== 'builtin'
+        customPanel.hidden = tab !== 'custom'
+
+        renderActiveList()
+      }
+
+      function scheduleAutoSave(part) {
+        if (part === 'builtin' || part === 'custom') {
+          state.dirty[part] = true
+        }
         state.pendingSave = true
         renderSummary()
 
@@ -630,8 +952,53 @@
         }, 220)
       }
 
-      function addCommand(code, rawValue, input) {
-        const item = findItem(code)
+      async function handleSave() {
+        if (state.saving) {
+          state.pendingSave = true
+          return
+        }
+
+        state.saving = true
+        state.pendingSave = false
+        renderSummary()
+
+        try {
+          if (state.dirty.builtin && builtinApi) {
+            const payload = state.builtin.items.map(item => ({
+              code: item.code,
+              enabled: item.enabled,
+              commands: item.commands.slice()
+            }))
+            state.builtin.items = decorateBuiltinItems(builtinApi.saveItems(payload))
+            state.dirty.builtin = false
+          }
+
+          if (state.dirty.custom && customApi) {
+            const payload = state.custom.items.map(item => ({
+              id: item.id,
+              enabled: item.enabled,
+              content: item.content,
+              commands: item.commands.slice()
+            }))
+            state.custom.items = decorateCustomItems(customApi.saveItems(payload))
+            state.dirty.custom = false
+          }
+
+          renderActiveList()
+        } catch (error) {
+          showNotification(`保存失败：${error && error.message ? error.message : '未知错误'}`)
+        } finally {
+          state.saving = false
+          renderSummary()
+
+          if (state.pendingSave) {
+            scheduleAutoSave()
+          }
+        }
+      }
+
+      function addBuiltinCommand(code, rawValue, input) {
+        const item = findBuiltinItem(code)
 
         if (!item) {
           return
@@ -663,64 +1030,142 @@
         }
 
         if (changed) {
-          renderList()
-          scheduleAutoSave()
+          renderActiveList()
+          scheduleAutoSave('builtin')
         }
       }
 
-      function removeCommand(code, command) {
-        const item = findItem(code)
+      function removeBuiltinCommand(code, command) {
+        const item = findBuiltinItem(code)
 
         if (!item) {
           return
         }
 
-        const nextCommands = item.commands.filter(value => value !== command)
+        const next = item.commands.filter(value => value !== command)
 
-        if (nextCommands.length === item.commands.length) {
+        if (next.length === item.commands.length) {
           return
         }
 
-        item.commands = nextCommands
-        renderList()
-        scheduleAutoSave()
+        item.commands = next
+        renderActiveList()
+        scheduleAutoSave('builtin')
       }
 
-      async function handleSave() {
-        if (!api) {
+      function addCustomCommand(id, rawValue, input) {
+        const item = findCustomItem(id)
+
+        if (!item) {
           return
         }
 
-        if (state.saving) {
-          state.pendingSave = true
+        const values = String(rawValue)
+          .split(/[\n,，]/)
+          .map(normalizeCommand)
+          .filter(Boolean)
+
+        if (values.length === 0) {
+          if (input) {
+            input.value = ''
+          }
           return
         }
 
-        state.saving = true
-        state.pendingSave = false
-        renderSummary()
+        let changed = false
 
-        try {
-          const payload = state.items.map(item => ({
-            code: item.code,
-            enabled: item.enabled,
-            commands: item.commands.slice()
-          }))
-          state.items = decorateItems(api.saveItems(payload))
-          renderList()
-        } catch (error) {
-          showNotification(`保存失败：${error && error.message ? error.message : '未知错误'}`)
-        } finally {
-          state.saving = false
-          renderSummary()
-
-          if (state.pendingSave) {
-            scheduleAutoSave()
+        for (const value of values) {
+          if (item.commands.includes(value) === false) {
+            item.commands.push(value)
+            changed = true
           }
         }
+
+        if (input) {
+          input.value = ''
+        }
+
+        if (changed) {
+          renderActiveList()
+          scheduleAutoSave('custom')
+        }
       }
 
-      listElement.addEventListener('change', event => {
+      function removeCustomCommand(id, command) {
+        const item = findCustomItem(id)
+
+        if (!item) {
+          return
+        }
+
+        const next = item.commands.filter(value => value !== command)
+
+        if (next.length === item.commands.length) {
+          return
+        }
+
+        item.commands = next
+        renderActiveList()
+        scheduleAutoSave('custom')
+      }
+
+      function addCustomItem() {
+        if (!customApi) {
+          showNotification('当前环境不支持自定义填充')
+          return
+        }
+
+        const newId = `cf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`
+        const newItem = {
+          id: newId,
+          enabled: true,
+          content: '',
+          commands: []
+        }
+        state.custom.items.unshift(newItem)
+        renderActiveList()
+        scheduleAutoSave('custom')
+
+        window.setTimeout(() => {
+          const textarea = customListElement.querySelector(
+            `[data-id="${newId}"] .content-input`
+          )
+          if (textarea instanceof HTMLTextAreaElement) {
+            textarea.focus()
+          }
+        }, 0)
+      }
+
+      function deleteCustomItem(id) {
+        const idx = state.custom.items.findIndex(item => item.id === id)
+        if (idx === -1) {
+          return
+        }
+        const confirmed = window.confirm('确定删除该自定义项？')
+        if (!confirmed) {
+          return
+        }
+        state.custom.items.splice(idx, 1)
+        renderActiveList()
+        scheduleAutoSave('custom')
+      }
+
+      tabsContainer.addEventListener('click', event => {
+        const button = event.target instanceof Element ? event.target.closest('.tab-button') : null
+        if (!button) {
+          return
+        }
+        const tab = button.dataset.tab
+        if (tab === 'builtin' || tab === 'custom') {
+          switchTab(tab)
+        }
+      })
+
+      enableAllButton.addEventListener('click', () => bulkSetEnabled(true))
+      disableAllButton.addEventListener('click', () => bulkSetEnabled(false))
+      addCustomButton.addEventListener('click', addCustomItem)
+
+      builtinListElement.addEventListener('change', event => {
         const target = event.target
 
         if (target instanceof HTMLInputElement === false || target.dataset.action !== 'enabled') {
@@ -728,7 +1173,7 @@
         }
 
         const row = target.closest('[data-code]')
-        const item = row ? findItem(row.dataset.code) : null
+        const item = row ? findBuiltinItem(row.dataset.code) : null
 
         if (!item) {
           return
@@ -741,11 +1186,11 @@
           copy.textContent = target.checked ? '开启' : '关闭'
         }
 
-        renderList()
-        scheduleAutoSave()
+        renderActiveList()
+        scheduleAutoSave('builtin')
       })
 
-      listElement.addEventListener('keydown', event => {
+      builtinListElement.addEventListener('keydown', event => {
         const target = event.target
 
         if (target instanceof HTMLInputElement === false || target.dataset.action !== 'add-command') {
@@ -759,24 +1204,24 @@
 
           if (code) {
             rememberInputFocus(target)
-            addCommand(code, target.value, target)
+            addBuiltinCommand(code, target.value, target)
           }
         }
 
         if (event.key === 'Backspace' && target.value === '') {
           const row = target.closest('[data-code]')
-          const item = row ? findItem(row.dataset.code) : null
+          const item = row ? findBuiltinItem(row.dataset.code) : null
 
           if (item && item.commands.length > 0) {
             rememberInputFocus(target)
             item.commands.pop()
-            renderList()
-            scheduleAutoSave()
+            renderActiveList()
+            scheduleAutoSave('builtin')
           }
         }
       })
 
-      listElement.addEventListener('blur', event => {
+      builtinListElement.addEventListener('blur', event => {
         const target = event.target
 
         if (target instanceof HTMLInputElement === false || target.dataset.action !== 'add-command') {
@@ -794,12 +1239,12 @@
           const code = row ? row.dataset.code : ''
 
           if (code) {
-            addCommand(code, target.value, target)
+            addBuiltinCommand(code, target.value, target)
           }
         }, 0)
       }, true)
 
-      listElement.addEventListener('click', event => {
+      builtinListElement.addEventListener('click', event => {
         const target = event.target instanceof Element ? event.target : null
 
         if (!target) {
@@ -814,19 +1259,17 @@
           const command = removeButton.getAttribute('data-command') || ''
 
           if (code && command) {
-            removeCommand(code, command)
+            removeBuiltinCommand(code, command)
           }
           return
         }
-
-        const previewButton = target.closest('[data-action="sample"]')
 
         const copyButton = target.closest('[data-action="copy-preview"]')
 
         if (copyButton) {
           const row = copyButton.closest('[data-code]')
           const code = row ? row.dataset.code : ''
-          const text = code ? state.previews[code] : ''
+          const text = code ? state.builtin.previews[code] : ''
 
           if (text) {
             copyPreviewText(text).catch((error) => {
@@ -836,6 +1279,8 @@
           return
         }
 
+        const previewButton = target.closest('[data-action="sample"]')
+
         if (!previewButton) {
           return
         }
@@ -843,25 +1288,167 @@
         const row = previewButton.closest('[data-code]')
         const code = row ? row.dataset.code : ''
 
-        if (!code || !api) {
+        if (!code || !builtinApi) {
           return
         }
 
-        state.previews[code] = api.generateSample(code)
-        renderList()
+        state.builtin.previews[code] = builtinApi.generateSample(code)
+        renderActiveList()
+      })
+
+      customListElement.addEventListener('change', event => {
+        const target = event.target
+
+        if (target instanceof HTMLInputElement === false || target.dataset.action !== 'enabled') {
+          return
+        }
+
+        const row = target.closest('[data-id]')
+        const item = row ? findCustomItem(row.dataset.id) : null
+
+        if (!item) {
+          return
+        }
+
+        item.enabled = target.checked
+        const copy = row.querySelector('.switch-copy')
+
+        if (copy) {
+          copy.textContent = target.checked ? '开启' : '关闭'
+        }
+
+        renderActiveList()
+        scheduleAutoSave('custom')
+      })
+
+      customListElement.addEventListener('input', event => {
+        const target = event.target
+
+        if (target instanceof HTMLTextAreaElement === false || target.dataset.action !== 'content') {
+          return
+        }
+
+        const row = target.closest('[data-id]')
+        const item = row ? findCustomItem(row.dataset.id) : null
+
+        if (!item) {
+          return
+        }
+
+        if (item.content === target.value) {
+          return
+        }
+
+        item.content = target.value
+        scheduleAutoSave('custom')
+      })
+
+      customListElement.addEventListener('keydown', event => {
+        const target = event.target
+
+        if (target instanceof HTMLInputElement === false || target.dataset.action !== 'add-command') {
+          return
+        }
+
+        if (event.key === 'Enter' || event.key === ',' || event.key === '，') {
+          event.preventDefault()
+          const row = target.closest('[data-id]')
+          const id = row ? row.dataset.id : ''
+
+          if (id) {
+            rememberInputFocus(target)
+            addCustomCommand(id, target.value, target)
+          }
+        }
+
+        if (event.key === 'Backspace' && target.value === '') {
+          const row = target.closest('[data-id]')
+          const item = row ? findCustomItem(row.dataset.id) : null
+
+          if (item && item.commands.length > 0) {
+            rememberInputFocus(target)
+            item.commands.pop()
+            renderActiveList()
+            scheduleAutoSave('custom')
+          }
+        }
+      })
+
+      customListElement.addEventListener('blur', event => {
+        const target = event.target
+
+        if (target instanceof HTMLInputElement === false || target.dataset.action !== 'add-command') {
+          return
+        }
+
+        const relatedTarget = event.relatedTarget instanceof Element ? event.relatedTarget : null
+
+        if (relatedTarget && relatedTarget.closest('[data-action="remove-command"], [data-action="delete-custom"]')) {
+          return
+        }
+
+        window.setTimeout(() => {
+          const row = target.closest('[data-id]')
+          const id = row ? row.dataset.id : ''
+
+          if (id) {
+            addCustomCommand(id, target.value, target)
+          }
+        }, 0)
+      }, true)
+
+      customListElement.addEventListener('click', event => {
+        const target = event.target instanceof Element ? event.target : null
+
+        if (!target) {
+          return
+        }
+
+        const removeButton = target.closest('[data-action="remove-command"]')
+
+        if (removeButton) {
+          const row = removeButton.closest('[data-id]')
+          const id = row ? row.dataset.id : ''
+          const command = removeButton.getAttribute('data-command') || ''
+
+          if (id && command) {
+            removeCustomCommand(id, command)
+          }
+          return
+        }
+
+        const deleteButton = target.closest('[data-action="delete-custom"]')
+
+        if (deleteButton) {
+          const row = deleteButton.closest('[data-id]')
+          const id = row ? row.dataset.id : ''
+
+          if (id) {
+            deleteCustomItem(id)
+          }
+        }
       })
 
       function init() {
         applyTheme()
         updateHeight()
 
-        if (!api) {
-          listElement.innerHTML = '<section class="empty">当前环境不支持随机数据配置页面。</section>'
+        if (!builtinApi && !customApi) {
+          builtinListElement.innerHTML = '<section class="empty">当前环境不支持随机数据配置页面。</section>'
+          customListElement.innerHTML = '<section class="empty">当前环境不支持自定义填充。</section>'
+          renderSummary()
           return
         }
 
-        state.items = decorateItems(api.getItems())
-        renderList()
+        if (builtinApi) {
+          state.builtin.items = decorateBuiltinItems(builtinApi.getItems())
+        }
+
+        if (customApi) {
+          state.custom.items = decorateCustomItems(customApi.getItems())
+        }
+
+        renderActiveList()
       }
 
       init()

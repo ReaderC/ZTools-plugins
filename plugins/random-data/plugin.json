@@ -4,7 +4,7 @@
   "title": "随机数据",
   "description": "输入指令生成常用随机测试数据，并自动填充到当前输入框。",
   "author": "gaoyubo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "main": "index.html",
   "preload": "preload.js",
   "logo": "logo.svg",

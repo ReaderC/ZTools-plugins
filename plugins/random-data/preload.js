@@ -1316,9 +1316,207 @@ function generateSample(code) {
   return typeof creator === "function" ? creator() : "";
 }
 
+const CUSTOM_STORAGE_KEY = "custom-fill-items";
+const CUSTOM_DOC_ID = "__random_data_custom_items__";
+const CUSTOM_FEATURE_PREFIX = "customFill_";
+
+function buildCustomFeatureCode(id) {
+  return `${CUSTOM_FEATURE_PREFIX}${id}`;
+}
+
+function generateCustomItemId() {
+  return `cf_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeCustomItem(raw) {
+  return {
+    id: typeof raw.id === "string" && raw.id ? raw.id : generateCustomItemId(),
+    enabled: raw.enabled !== false,
+    content: typeof raw.content === "string" ? raw.content : "",
+    commands: normalizeCommands(raw.commands || []),
+  };
+}
+
+function normalizeCustomItems(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  const result = [];
+  const seenIds = new Set();
+
+  for (const raw of items) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+
+    const item = normalizeCustomItem(raw);
+
+    if (seenIds.has(item.id)) {
+      continue;
+    }
+
+    seenIds.add(item.id);
+    result.push(item);
+  }
+
+  return result;
+}
+
+function loadCustomItemsFromDb() {
+  if (
+    window.ztools.dbStorage &&
+    typeof window.ztools.dbStorage.getItem === "function"
+  ) {
+    return window.ztools.dbStorage.getItem(CUSTOM_STORAGE_KEY);
+  }
+
+  if (window.ztools.db && typeof window.ztools.db.get === "function") {
+    const document = window.ztools.db.get(CUSTOM_DOC_ID);
+    return document && document.value ? document.value : null;
+  }
+
+  return null;
+}
+
+function loadCustomItems() {
+  return normalizeCustomItems(loadCustomItemsFromDb());
+}
+
+function saveCustomItemsToDb(items) {
+  if (
+    window.ztools.dbStorage &&
+    typeof window.ztools.dbStorage.setItem === "function"
+  ) {
+    window.ztools.dbStorage.setItem(CUSTOM_STORAGE_KEY, items);
+    return;
+  }
+
+  if (
+    window.ztools.db &&
+    typeof window.ztools.db.put === "function" &&
+    typeof window.ztools.db.get === "function"
+  ) {
+    const current = window.ztools.db.get(CUSTOM_DOC_ID);
+    const document = {
+      _id: CUSTOM_DOC_ID,
+      value: items,
+    };
+
+    if (current && current._rev) {
+      document._rev = current._rev;
+    }
+
+    window.ztools.db.put(document);
+  }
+}
+
+function createCustomHandler(id) {
+  return {
+    mode: "none",
+    args: {
+      async enter() {
+        const item = currentCustomItems.find((entry) => entry.id === id);
+
+        if (!item || item.enabled === false) {
+          if (
+            window.ztools &&
+            typeof window.ztools.showNotification === "function"
+          ) {
+            window.ztools.showNotification("该自定义项已关闭或已删除");
+          }
+
+          return { success: false, data: "" };
+        }
+
+        const text = item.content || "";
+        await complete(text);
+        return { success: true, data: text };
+      },
+    },
+  };
+}
+
+function syncCustomFeatures(items, previousItems) {
+  if (typeof window.ztools.removeFeature !== "function") {
+    return;
+  }
+
+  const currentIds = new Set(items.map((item) => item.id));
+
+  for (const old of previousItems || []) {
+    if (!currentIds.has(old.id)) {
+      const oldCode = buildCustomFeatureCode(old.id);
+      window.ztools.removeFeature(oldCode);
+
+      if (window.exports) {
+        delete window.exports[oldCode];
+      }
+    }
+  }
+
+  for (const item of items) {
+    const code = buildCustomFeatureCode(item.id);
+    window.ztools.removeFeature(code);
+
+    if (item.enabled === false || item.commands.length === 0) {
+      continue;
+    }
+
+    if (window.exports && !window.exports[code]) {
+      window.exports[code] = createCustomHandler(item.id);
+    }
+
+    if (typeof window.ztools.setFeature === "function") {
+      window.ztools.setFeature({
+        code,
+        explain: item.content
+          ? `自定义：${item.content.slice(0, 24)}`
+          : "自定义填充",
+        icon: GENERATOR_ICON,
+        cmds: item.commands.slice(),
+      });
+    }
+  }
+}
+
+function listCustomItems() {
+  return currentCustomItems.map((item) => ({
+    id: item.id,
+    enabled: item.enabled,
+    content: item.content,
+    commands: item.commands.slice(),
+  }));
+}
+
+function saveCustomItems(items) {
+  const previous = currentCustomItems;
+  currentCustomItems = normalizeCustomItems(items);
+  saveCustomItemsToDb(currentCustomItems);
+  syncCustomFeatures(currentCustomItems, previous);
+  return listCustomItems();
+}
+
 let currentSettings = loadSettings();
+let currentCustomItems = loadCustomItems();
+
+window.exports = {
+  ...Object.fromEntries(
+    generatorDefinitions.map((definition) => [
+      definition.code,
+      createHandler(definition.code),
+    ]),
+  ),
+  ...Object.fromEntries(
+    currentCustomItems.map((item) => [
+      buildCustomFeatureCode(item.id),
+      createCustomHandler(item.id),
+    ]),
+  ),
+};
 
 syncFeatures(currentSettings);
+syncCustomFeatures(currentCustomItems, []);
 
 window.randomDataApi = {
   getItems: listSettingsItems,
@@ -1326,9 +1524,7 @@ window.randomDataApi = {
   generateSample,
 };
 
-window.exports = Object.fromEntries(
-  generatorDefinitions.map((definition) => [
-    definition.code,
-    createHandler(definition.code),
-  ]),
-);
+window.customFillApi = {
+  getItems: listCustomItems,
+  saveItems: saveCustomItems,
+};
