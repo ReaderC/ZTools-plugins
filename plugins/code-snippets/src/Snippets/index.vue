@@ -1,21 +1,40 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, toRaw, onUnmounted } from 'vue'
+import { ref, computed, onMounted, toRaw, onUnmounted, shallowRef, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
 import { Codemirror } from 'vue-codemirror'
-import { javascript } from '@codemirror/lang-javascript'
-import { python } from '@codemirror/lang-python'
-import { java } from '@codemirror/lang-java'
-import { cpp } from '@codemirror/lang-cpp'
-import { html } from '@codemirror/lang-html'
-import { css } from '@codemirror/lang-css'
-import { go } from '@codemirror/lang-go'
-import { rust } from '@codemirror/lang-rust'
-import { sql } from '@codemirror/lang-sql'
-import { json } from '@codemirror/lang-json'
-import { markdown } from '@codemirror/lang-markdown'
 import type { Extension } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+
+const langLoaders: Record<string, () => Promise<{ [key: string]: any }>> = {
+  javascript: () => import('@codemirror/lang-javascript'),
+  typescript: () => import('@codemirror/lang-javascript'),
+  python: () => import('@codemirror/lang-python'),
+  java: () => import('@codemirror/lang-java'),
+  cpp: () => import('@codemirror/lang-cpp'),
+  html: () => import('@codemirror/lang-html'),
+  css: () => import('@codemirror/lang-css'),
+  go: () => import('@codemirror/lang-go'),
+  rust: () => import('@codemirror/lang-rust'),
+  sql: () => import('@codemirror/lang-sql'),
+  json: () => import('@codemirror/lang-json'),
+  markdown: () => import('@codemirror/lang-markdown'),
+}
+
+const langExportMap: Record<string, string> = {
+  javascript: 'javascript',
+  typescript: 'typescript',
+  python: 'python',
+  java: 'java',
+  cpp: 'cpp',
+  html: 'html',
+  css: 'css',
+  go: 'go',
+  rust: 'rust',
+  sql: 'sql',
+  json: 'json',
+  markdown: 'markdown',
+}
 
 interface Template {
   _id: string
@@ -31,19 +50,19 @@ interface Template {
 }
 
 const languageOptions = [
-  { value: 'javascript', label: 'JavaScript', ext: javascript },
-  { value: 'typescript', label: 'TypeScript', ext: javascript },
-  { value: 'python', label: 'Python', ext: python },
-  { value: 'java', label: 'Java', ext: java },
-  { value: 'cpp', label: 'C/C++', ext: cpp },
-  { value: 'html', label: 'HTML', ext: html },
-  { value: 'css', label: 'CSS', ext: css },
-  { value: 'go', label: 'Go', ext: go },
-  { value: 'rust', label: 'Rust', ext: rust },
-  { value: 'sql', label: 'SQL', ext: sql },
-  { value: 'json', label: 'JSON', ext: json },
-  { value: 'markdown', label: 'Markdown', ext: markdown },
-  { value: 'plaintext', label: '纯文本', ext: undefined }
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'java', label: 'Java' },
+  { value: 'cpp', label: 'C/C++' },
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
+  { value: 'go', label: 'Go' },
+  { value: 'rust', label: 'Rust' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'json', label: 'JSON' },
+  { value: 'markdown', label: 'Markdown' },
+  { value: 'plaintext', label: '纯文本' }
 ]
 
 const templates = ref<Template[]>([])
@@ -68,20 +87,28 @@ const onDarkChange = (e: MediaQueryListEvent) => { isDark.value = e.matches }
 darkMedia.addEventListener('change', onDarkChange)
 onUnmounted(() => darkMedia.removeEventListener('change', onDarkChange))
 
-const cmExtensions = computed(() => {
-  const langOpt = languageOptions.find((l) => l.value === form.value.language)
-  const exts: Extension[] = langOpt?.ext ? [langOpt.ext()] : []
+async function loadExtensions(lang: string): Promise<Extension[]> {
+  const exts: Extension[] = []
+  const loader = langLoaders[lang]
+  if (loader) {
+    const mod = await loader()
+    const exportName = langExportMap[lang]
+    const extFn = mod[exportName]
+    if (extFn) exts.push(extFn())
+  }
   if (isDark.value) exts.push(oneDark)
   return exts
-})
+}
 
-const detailExtensions = computed(() => {
-  if (!selected.value) return []
-  const langOpt = languageOptions.find((l) => l.value === selected.value!.language)
-  const exts: Extension[] = langOpt?.ext ? [langOpt.ext()] : []
-  if (isDark.value) exts.push(oneDark)
-  return exts
-})
+const cmExtensions = shallowRef<Extension[]>([])
+watch([() => form.value.language, isDark] as const, async ([lang]) => {
+  cmExtensions.value = await loadExtensions(lang)
+}, { immediate: true })
+
+const detailExtensions = shallowRef<Extension[]>([])
+watch([() => selected.value?.language ?? '', isDark] as const, async ([lang]) => {
+  detailExtensions.value = lang ? await loadExtensions(lang) : []
+}, { immediate: true })
 
 const filteredTemplates = computed(() => {
   const keyword = searchKeyword.value.toLowerCase().trim()
