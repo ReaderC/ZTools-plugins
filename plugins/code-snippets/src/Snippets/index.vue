@@ -1,17 +1,10 @@
 <script lang="ts">
 import { defineAsyncComponent } from 'vue'
+import type { HighlighterCore } from 'shiki'
 
 const AsyncCodemirror = defineAsyncComponent(() =>
   import('vue-codemirror').then(m => m.Codemirror)
 )
-</script>
-
-<script setup lang="ts">
-import { ref, computed, onMounted, toRaw, onUnmounted, shallowRef, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
-import type { Extension } from '@codemirror/state'
-import type { HighlighterCore } from 'shiki'
 
 let shikiPromise: Promise<HighlighterCore> | null = null
 async function getShiki() {
@@ -126,11 +119,20 @@ const languageOptions = [
   { value: 'plaintext', label: '纯文本' }
 ]
 
+const LOCAL_KEY = 'code_snippets_templates'
+</script>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, toRaw, onUnmounted, shallowRef, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
+import type { Extension } from '@codemirror/state'
+
 const templates = ref<Template[]>([])
 const selected = ref<Template | null>(null)
 const searchKeyword = ref('')
 const isNew = ref(false)
-const hasZtools = ref(!!window.ztools)
+
 // 'empty' | 'detail' | 'edit'
 const viewMode = ref<'empty' | 'detail' | 'edit'>('empty')
 
@@ -171,7 +173,6 @@ watch([() => form.value.language, isDark] as const, async ([lang]) => {
 }, { immediate: true })
 
 const highlightedCode = ref('')
-const codeContainerRef = ref<HTMLElement>()
 
 async function highlightDetailCode() {
   const sel = selected.value
@@ -201,7 +202,6 @@ const filteredTemplates = computed(() => {
   })
 })
 
-const LOCAL_KEY = 'code_snippets_templates'
 const localLoad = (): Template[] => {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]')
@@ -599,7 +599,7 @@ onMounted(() => {
             <span class="detail-usage" v-if="selected.usageCount">已复制 {{ selected.usageCount }} 次</span>
           </div>
         </div>
-        <div class="detail-code" ref="codeContainerRef">
+        <div class="detail-code">
           <div class="shiki-code" v-html="highlightedCode"></div>
         </div>
       </template>
