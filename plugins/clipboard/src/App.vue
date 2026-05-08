@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { TAB_DEFINITIONS } from '@/constants'
 import { useFavorites } from '@/composables/useFavorites'
 import { useClipboardData } from '@/composables/useClipboardData'
@@ -66,7 +66,7 @@ const handleContextMenu = (event, item) => {
 }
 
 const handleFavoriteConfirm = async (remark) => {
-  await confirmFavorite(addFavorite)
+  await confirmFavorite(addFavorite, remark)
 }
 
 const showDeleteConfirm = ref(false)
@@ -143,6 +143,27 @@ const doReload = () => {
   reload(clipboardListRef)
 }
 
+const focusSearchInput = () => {
+  nextTick(() => {
+    try {
+      window.ztools.subInputFocus()
+    } catch (error) {
+      console.error('聚焦搜索框失败:', error)
+    }
+  })
+}
+
+const resetSearchAndFocus = async () => {
+  searchText.value = ''
+  try {
+    await window.ztools.setSubInputValue('')
+  } catch (error) {
+    console.error('清空搜索框失败:', error)
+  }
+  doReload()
+  focusSearchInput()
+}
+
 // ---- 监听 & 生命周期 ----
 watch(activeTab, doReload)
 
@@ -153,15 +174,16 @@ onMounted(async () => {
   await loadFavorites()
   fetchClipboardHistory()
 
-  window.ztools.clipboard.onChange(() => doReload())
-  window.ztools.onPluginEnter(() => {
-    searchText.value = ''
-    doReload()
-  })
-  window.ztools.setSubInput((text) => {
+  await window.ztools.setSubInput((text) => {
     searchText.value = text.text
     doReload()
   }, '搜索剪贴板内容...', true)
+
+  window.ztools.clipboard.onChange(() => doReload())
+  window.ztools.onPluginEnter(() => {
+    resetSearchAndFocus()
+  })
+  focusSearchInput()
 })
 
 onUnmounted(() => {
