@@ -1,10 +1,48 @@
-<script setup lang="ts">
-import { ref, computed, onMounted, toRaw, onUnmounted, shallowRef, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
-import { Codemirror } from 'vue-codemirror'
-import type { Extension } from '@codemirror/state'
-import { oneDark } from '@codemirror/theme-one-dark'
+<script lang="ts">
+import { defineAsyncComponent } from 'vue'
+import type { HighlighterCore } from 'shiki'
+
+const AsyncCodemirror = defineAsyncComponent(() =>
+  import('vue-codemirror').then(m => m.Codemirror)
+)
+
+let shikiPromise: Promise<HighlighterCore> | null = null
+async function getShiki() {
+  if (!shikiPromise) {
+    const { createHighlighterCore } = await import('shiki/core')
+    const { createJavaScriptRegexEngine } = await import('@shikijs/engine-javascript')
+    shikiPromise = createHighlighterCore({
+      themes: [
+        import('@shikijs/themes/github-dark'),
+        import('@shikijs/themes/github-light'),
+      ],
+      langs: [
+        import('@shikijs/langs/javascript'),
+        import('@shikijs/langs/typescript'),
+        import('@shikijs/langs/python'),
+        import('@shikijs/langs/java'),
+        import('@shikijs/langs/cpp'),
+        import('@shikijs/langs/html'),
+        import('@shikijs/langs/css'),
+        import('@shikijs/langs/go'),
+        import('@shikijs/langs/rust'),
+        import('@shikijs/langs/sql'),
+        import('@shikijs/langs/json'),
+        import('@shikijs/langs/markdown'),
+      ],
+      engine: createJavaScriptRegexEngine(),
+    })
+  }
+  return shikiPromise
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(async () => {
+    const h = await shikiPromise
+    h?.dispose()
+    shikiPromise = null
+  })
+}
 
 const langLoaders: Record<string, () => Promise<{ [key: string]: any }>> = {
   javascript: () => import('@codemirror/lang-javascript'),
@@ -36,6 +74,22 @@ const langExportMap: Record<string, string> = {
   markdown: 'markdown',
 }
 
+const shikiLangMap: Record<string, string> = {
+  javascript: 'javascript',
+  typescript: 'typescript',
+  python: 'python',
+  java: 'java',
+  cpp: 'cpp',
+  html: 'html',
+  css: 'css',
+  go: 'go',
+  rust: 'rust',
+  sql: 'sql',
+  json: 'json',
+  markdown: 'markdown',
+  plaintext: 'text',
+}
+
 interface Template {
   _id: string
   _rev?: string
@@ -65,11 +119,20 @@ const languageOptions = [
   { value: 'plaintext', label: '纯文本' }
 ]
 
+const LOCAL_KEY = 'code_snippets_templates'
+</script>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, toRaw, onUnmounted, shallowRef, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { CopyDocument, Delete, Edit } from '@element-plus/icons-vue'
+import type { Extension } from '@codemirror/state'
+
 const templates = ref<Template[]>([])
 const selected = ref<Template | null>(null)
 const searchKeyword = ref('')
 const isNew = ref(false)
-const hasZtools = ref(!!window.ztools)
+
 // 'empty' | 'detail' | 'edit'
 const viewMode = ref<'empty' | 'detail' | 'edit'>('empty')
 
@@ -84,10 +147,14 @@ const form = ref({
 const isDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
 const darkMedia = window.matchMedia('(prefers-color-scheme: dark)')
 const onDarkChange = (e: MediaQueryListEvent) => { isDark.value = e.matches }
-darkMedia.addEventListener('change', onDarkChange)
+
+onMounted(() => {
+  darkMedia.addEventListener('change', onDarkChange)
+})
 onUnmounted(() => darkMedia.removeEventListener('change', onDarkChange))
 
 async function loadExtensions(lang: string): Promise<Extension[]> {
+  const { oneDark } = await import('@codemirror/theme-one-dark')
   const exts: Extension[] = []
   const loader = langLoaders[lang]
   if (loader) {
@@ -105,10 +172,21 @@ watch([() => form.value.language, isDark] as const, async ([lang]) => {
   cmExtensions.value = await loadExtensions(lang)
 }, { immediate: true })
 
-const detailExtensions = shallowRef<Extension[]>([])
-watch([() => selected.value?.language ?? '', isDark] as const, async ([lang]) => {
-  detailExtensions.value = lang ? await loadExtensions(lang) : []
-}, { immediate: true })
+const highlightedCode = ref('')
+
+async function highlightDetailCode() {
+  const sel = selected.value
+  if (!sel || !sel.code) {
+    highlightedCode.value = ''
+    return
+  }
+  const highlighter = await getShiki()
+  const lang = shikiLangMap[sel.language] || 'text'
+  const theme = isDark.value ? 'github-dark' : 'github-light'
+  highlightedCode.value = highlighter.codeToHtml(sel.code, { lang, theme })
+}
+
+watch([() => selected.value?.code, () => selected.value?.language, isDark], highlightDetailCode, { immediate: true })
 
 const filteredTemplates = computed(() => {
   const keyword = searchKeyword.value.toLowerCase().trim()
@@ -124,7 +202,6 @@ const filteredTemplates = computed(() => {
   })
 })
 
-const LOCAL_KEY = 'code_snippets_templates'
 const localLoad = (): Template[] => {
   try {
     return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]')
@@ -523,13 +600,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="detail-code">
-          <Codemirror
-            :model-value="selected.code"
-            :extensions="detailExtensions"
-            :style="{ height: '100%', width: '100%' }"
-            :disabled="true"
-            :tab-size="4"
-          />
+          <div class="shiki-code" v-html="highlightedCode"></div>
         </div>
       </template>
 
@@ -574,7 +645,7 @@ onMounted(() => {
             </div>
           </el-form-item>
           <el-form-item label="代码" class="code-form-item">
-            <Codemirror
+            <AsyncCodemirror
               v-model="form.code"
               :extensions="cmExtensions"
               :style="{ height: '360px', width: '100%' }"
@@ -779,10 +850,24 @@ onMounted(() => {
 .detail-code {
   flex: 1;
   min-height: 0;
+  overflow: auto;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
 }
 
-.detail-code :deep(.cm-editor) {
-  height: 100%;
+.shiki-code {
+  padding: 0;
+  margin: 0;
+}
+
+.shiki-code :deep(pre) {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 14px;
+  font-family: Consolas, Monaco, 'Courier New', monospace;
+  line-height: 1.5;
+  background: transparent !important;
 }
 
 .code-form-item :deep(.el-form-item__content) {
