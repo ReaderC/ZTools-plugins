@@ -141,8 +141,7 @@ const els = {
   paste: document.querySelector('#pasteInput'),
   copy: document.querySelector('#copyOutput'),
   clear: document.querySelector('#clearAll'),
-  status: document.querySelector('#statusLine'),
-  summary: document.querySelector('#activeSummary')
+  status: document.querySelector('#statusLine')
 }
 
 let activeCategory = 'encoding'
@@ -215,7 +214,6 @@ function renderOperations(categoryId) {
     els.operation.append(option)
   }
 
-  els.summary.textContent = category.label
   updateKeyField()
   resizePlugin()
 }
@@ -307,7 +305,7 @@ function setStatus(message, tone = '') {
 function resizePlugin() {
   if (!window.ztools?.setExpendHeight) return
   window.requestAnimationFrame(() => {
-    const height = Math.min(Math.max(document.documentElement.scrollHeight, 560), 760)
+    const height = Math.min(Math.max(document.documentElement.scrollHeight, 430), 560)
     window.ztools.setExpendHeight(height)
   })
 }
