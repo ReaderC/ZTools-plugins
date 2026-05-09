@@ -2,6 +2,13 @@
 
 本文件记录 ZTools 开发百宝箱插件的版本变更历史。
 
+## [2.3.1] - 2026-05-09
+
+### 变更
+
+- 优化侧边栏分类：原 5 分类（随机生成、加密安全、文本、图像、日期时间）精简为 3 分类（随机生成、编码转换、开发工具）
+- 简化插件描述和 README 工具列表，去除冗余功能说明
+
 ## [2.3.0] - 2026-05-09
 
 ### 新增
@@ -63,6 +70,7 @@
 - **随机颜色生成器** — HSL 滑块调色，支持 HEX/RGB/HSL 多格式复制
 - **加密签名生成器** — 支持 MD5、SHA-1、SHA-256、SHA-512、HMAC-SHA256、HMAC-SHA512
 
+[2.3.1]: https://github.com/user/devbox/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/user/devbox/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/user/devbox/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/user/devbox/compare/v2.1.0-beta...v2.1.0

@@ -15,8 +15,8 @@ function isActive(tool: Tool): boolean {
 </script>
 
 <template>
-  <div class="toolbox-layout">
-    <aside class="sidebar">
+  <el-container class="toolbox-layout">
+    <el-aside width="150px" class="sidebar">
       <template v-for="cat in categories" :key="cat.code">
         <div class="cat-title">{{ cat.name }}</div>
         <div
@@ -30,28 +30,23 @@ function isActive(tool: Tool): boolean {
           <span class="tool-name">{{ tool.explain }}</span>
         </div>
       </template>
-    </aside>
-    <main class="content">
+    </el-aside>
+    <el-main class="content">
       <slot />
-    </main>
-  </div>
+    </el-main>
+  </el-container>
 </template>
 
 <style scoped>
 .toolbox-layout {
-  display: flex;
   height: 100%;
-  overflow: hidden;
 }
 
 .sidebar {
-  width: 150px;
-  flex-shrink: 0;
-  height: 100%;
   background: var(--sidebar-bg, #f7f8fa);
   border-right: 1px solid var(--border-color, #e5e5e5);
-  overflow-y: auto;
   padding: 8px 0;
+  overflow-y: auto;
 }
 
 .cat-title {
@@ -100,9 +95,7 @@ function isActive(tool: Tool): boolean {
 }
 
 .content {
-  flex: 1;
-  overflow-y: auto;
-  min-width: 0;
+  padding: 0;
 }
 
 @media (max-width: 600px) {
@@ -111,7 +104,6 @@ function isActive(tool: Tool): boolean {
   }
 
   .sidebar {
-    width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border-color, #e5e5e5);
     display: flex;
