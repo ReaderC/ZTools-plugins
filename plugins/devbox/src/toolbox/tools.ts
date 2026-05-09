@@ -8,6 +8,7 @@ import Signature from '../tools/Signature/index.vue'
 import Pinyin from '../tools/Pinyin/index.vue'
 import Qrcode from '../tools/Qrcode/index.vue'
 import HTMLPreview from '../tools/HTMLPreview/index.vue'
+import TimeConvert from '../tools/TimeConvert/index.vue'
 
 export interface Tool {
   code: string
@@ -24,7 +25,7 @@ export interface Category {
 
 export const categories: Category[] = [
   {
-    name: '随机/生成',
+    name: '随机生成',
     code: 'random',
     tools: [
       { code: 'identity', explain: '随机身份', icon: '', component: Identity },
@@ -35,25 +36,20 @@ export const categories: Category[] = [
     ]
   },
   {
-    name: '加密/安全',
-    code: 'crypto',
+    name: '编码转换',
+    code: 'convert',
     tools: [
       { code: 'signature', explain: '加密签名', icon: '', component: Signature },
-    ]
-  },
-  {
-    name: '文本',
-    code: 'text',
-    tools: [
-      { code: 'pinyin', explain: '中文转拼音命名', icon: '', component: Pinyin },
-      { code: 'htmlpreview', explain: 'HTML预览', icon: '', component: HTMLPreview },
-    ]
-  },
-  {
-    name: '图像',
-    code: 'image',
-    tools: [
+      { code: 'pinyin', explain: '中文转拼音', icon: '', component: Pinyin },
       { code: 'qrcode', explain: '二维码', icon: '', component: Qrcode },
+      { code: 'timeconvert', explain: '时间转换', icon: '', component: TimeConvert },
+    ]
+  },
+  {
+    name: '开发工具',
+    code: 'dev',
+    tools: [
+      { code: 'htmlpreview', explain: 'HTML预览', icon: '', component: HTMLPreview },
     ]
   }
 ]
