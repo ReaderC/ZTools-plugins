@@ -1,7 +1,7 @@
 {
   "name": "myPlugins",
-  "version": "2.2.0",
-  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音、HTML预览等实用工具",
+  "version": "2.3.0",
+  "description": "开发百宝箱，包含随机密码、UUID、数字、颜色、加密签名、中文转拼音、HTML预览、时间转换等实用工具",
   "type": "module",
   "scripts": {
     "dev": "vite",

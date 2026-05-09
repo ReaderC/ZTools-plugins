@@ -8,6 +8,7 @@ import Signature from '../tools/Signature/index.vue'
 import Pinyin from '../tools/Pinyin/index.vue'
 import Qrcode from '../tools/Qrcode/index.vue'
 import HTMLPreview from '../tools/HTMLPreview/index.vue'
+import TimeConvert from '../tools/TimeConvert/index.vue'
 
 export interface Tool {
   code: string
@@ -54,6 +55,13 @@ export const categories: Category[] = [
     code: 'image',
     tools: [
       { code: 'qrcode', explain: '二维码', icon: '', component: Qrcode },
+    ]
+  },
+  {
+    name: '日期/时间',
+    code: 'datetime',
+    tools: [
+      { code: 'timeconvert', explain: '时间转换', icon: '', component: TimeConvert },
     ]
   }
 ]
