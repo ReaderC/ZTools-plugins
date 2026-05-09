@@ -378,16 +378,33 @@ const handleCopy = (tpl: Template, event?: Event) => {
   } else {
     navigator.clipboard?.writeText(tpl.code)
   }
-  tpl.usageCount++
-  const doc = { ...tpl, updatedAt: new Date().toISOString() }
+  const newCount = tpl.usageCount + 1
+  const now = new Date().toISOString()
+  const doc = { ...toRaw(tpl), usageCount: newCount, updatedAt: now }
   if (window.ztools?.db) {
-    window.ztools.db.put(toRaw(doc))
-    loadTemplates()
+    const result = window.ztools.db.put(doc)
+    if (result) {
+      tpl.usageCount = newCount
+      tpl._rev = result.rev
+      tpl.updatedAt = now
+      if (selected.value?._id === tpl._id) {
+        selected.value.usageCount = newCount
+        selected.value._rev = result.rev
+        selected.value.updatedAt = now
+      }
+      loadTemplates()
+    }
   } else {
     const list = localLoad()
     const idx = list.findIndex((t) => t._id === doc._id)
     if (idx >= 0) list[idx] = doc
     localSave(list)
+    tpl.usageCount = newCount
+    tpl.updatedAt = now
+    if (selected.value?._id === tpl._id) {
+      selected.value.usageCount = newCount
+      selected.value.updatedAt = now
+    }
     loadTemplates()
   }
   ElMessage({ message: '已复制到剪贴板', type: 'success', duration: 1000 })
