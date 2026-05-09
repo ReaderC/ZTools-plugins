@@ -2,6 +2,16 @@
 
 本文件记录 ZTools 开发百宝箱插件的版本变更历史。
 
+## [2.3.2] - 2026-05-09
+
+### 修复
+
+- 时间戳识别正则精确匹配 10 位或 13 位，避免 11/12 位数字误匹配
+- 第一项标签从「本地时间」改为「格式化时间」，避免切换时区后产生误导
+- RFC 2822 格式动态使用所选时区偏移，不再硬编码 UTC
+- 未来时间（60 秒内）显示「片刻后」而非「刚刚」
+- 移除实时时钟 pulse 动画，提供更稳定的视觉体验
+
 ## [2.3.1] - 2026-05-09
 
 ### 变更
@@ -70,6 +80,7 @@
 - **随机颜色生成器** — HSL 滑块调色，支持 HEX/RGB/HSL 多格式复制
 - **加密签名生成器** — 支持 MD5、SHA-1、SHA-256、SHA-512、HMAC-SHA256、HMAC-SHA512
 
+[2.3.2]: https://github.com/user/devbox/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/user/devbox/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/user/devbox/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/user/devbox/compare/v2.1.0...v2.2.0

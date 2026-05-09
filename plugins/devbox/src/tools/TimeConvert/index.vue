@@ -32,7 +32,7 @@ const parsedDate = computed(() => {
   const raw = inputTime.value.trim()
 
   // Try Unix timestamp (seconds or milliseconds)
-  if (/^\d{10,13}$/.test(raw)) {
+  if (/^\d{10}$|^\d{13}$/.test(raw)) {
     const num = Number(raw)
     const ms = raw.length === 10 ? num * 1000 : num
     const d = new Date(ms)
@@ -116,7 +116,7 @@ const formats = computed(() => {
 
   return [
     {
-      label: '本地时间',
+      label: '格式化时间',
       value: `${year}-${month}-${day} ${hour}:${minute}:${second}`,
       desc: 'YYYY-MM-DD HH:mm:ss',
     },
@@ -142,7 +142,7 @@ const formats = computed(() => {
     },
     {
       label: 'RFC 2822',
-      value: `${days[d.getUTCDay()]}, ${utcDay} ${months[d.getUTCMonth()]} ${utcYear} ${utcHour}:${utcMinute}:${utcSecond} +0000`,
+      value: `${days[ld.getDay()]}, ${day} ${months[ld.getMonth()]} ${year} ${hour}:${minute}:${second} ${tzStr.value}`,
       desc: 'RFC 2822 邮件日期格式',
     },
     {
@@ -178,7 +178,7 @@ function getRelativeTime(d: Date): string {
   const absDiff = Math.abs(diff)
   const suffix = diff >= 0 ? '前' : '后'
 
-  if (absDiff < 60000) return '刚刚'
+  if (absDiff < 60000) return diff >= 0 ? '刚刚' : '片刻后'
   if (absDiff < 3600000) return `${Math.floor(absDiff / 60000)} 分钟${suffix}`
   if (absDiff < 86400000) return `${Math.floor(absDiff / 3600000)} 小时${suffix}`
   if (absDiff < 2592000000) return `${Math.floor(absDiff / 86400000)} 天${suffix}`
@@ -305,16 +305,10 @@ h2 {
   color: #e6a23c;
   cursor: pointer;
   transition: opacity 0.15s;
-  animation: pulse 1s ease-in-out infinite;
 }
 
 .live-clock:hover {
   opacity: 0.7;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 
 .input-area {

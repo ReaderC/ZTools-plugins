@@ -1,6 +1,6 @@
 {
   "name": "myPlugins",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "开发百宝箱，提供随机生成、编码转换、开发辅助等常用工具集",
   "type": "module",
   "scripts": {
