@@ -2,6 +2,12 @@
 
 本文件记录「代码模板」插件每次版本更新的内容。
 
+## [1.0.4] - 2026-05-11
+
+### 修复
+
+- 修复复制操作时 `ztools.db.put` 报 `An object could not be cloned` 错误：`handleCopy` 中 `{ ...toRaw(tpl) }` 展开后嵌套属性（如 `tags` 数组）仍为 Vue 响应式代理，Electron `sendSync` 的 `structuredClone` 无法序列化代理对象，改为手动构造纯数据对象
+
 ## [1.0.3] - 2026-05-09
 
 ### 修复

@@ -380,7 +380,18 @@ const handleCopy = (tpl: Template, event?: Event) => {
   }
   const newCount = tpl.usageCount + 1
   const now = new Date().toISOString()
-  const doc = { ...toRaw(tpl), usageCount: newCount, updatedAt: now }
+  const doc: Template = {
+    _id: tpl._id,
+    _rev: tpl._rev,
+    name: tpl.name,
+    description: tpl.description,
+    language: tpl.language,
+    tags: [...tpl.tags],
+    code: tpl.code,
+    usageCount: newCount,
+    createdAt: tpl.createdAt,
+    updatedAt: now
+  }
   if (window.ztools?.db) {
     const result = window.ztools.db.put(doc)
     if (result) {
