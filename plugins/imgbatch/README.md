@@ -47,73 +47,9 @@
 - 设置页改为全屏工作区模式，支持滚动和 `Esc` 退出
 - 修正结果页、继续处理、确认框/预设框 `Esc` 等一批交互回归问题
 
-## 界面预览
+## 界面说明
 
-### 图片压缩
-
-![图片批量处理 图片压缩](./docs/screenshots/compression.png)
-
-### 格式转换
-
-![图片批量处理 格式转换](./docs/screenshots/format.png)
-
-### 修改尺寸
-
-![图片批量处理 修改尺寸](./docs/screenshots/resize.png)
-
-### 添加水印
-
-![图片批量处理 添加水印](./docs/screenshots/watermark.png)
-
-### 添加圆角
-
-![图片批量处理 添加圆角](./docs/screenshots/corners.png)
-
-### 补边留白
-
-![图片批量处理 补边留白](./docs/screenshots/padding.png)
-
-### 裁剪
-
-![图片批量处理 裁剪](./docs/screenshots/crop.png)
-
-### 旋转
-
-![图片批量处理 旋转](./docs/screenshots/rotate.png)
-
-### 翻转
-
-![图片批量处理 翻转](./docs/screenshots/flip.png)
-
-### 合并为 PDF
-
-![图片批量处理 合并为 PDF](./docs/screenshots/merge-pdf.png)
-
-### 合并为图片
-
-![图片批量处理 合并为图片](./docs/screenshots/merge-image.png)
-
-### 合并为 GIF
-
-![图片批量处理 合并为 GIF](./docs/screenshots/merge-gif.png)
-
-### 手动裁剪
-
-![图片批量处理 手动裁剪](./docs/screenshots/manual-crop.png)
-
-### 预览效果
-
-![图片批量处理 预览双栏对比图](./docs/screenshots/preview1.png)
-
-![图片批量处理 预览前后对比图](./docs/screenshots/preview2.png)
-
-### 设置页
-
-![图片批量处理 设置页](./docs/screenshots/settings.png)
-
-### 处理结果对比
-
-![图片批量处理 处理结果对比](./docs/screenshots/result.png)
+仓库内截图资源已移除，避免发布目录和官方插件仓库持续携带大体积预览图片。插件界面与交互以本地 ZTools 客户端中的实际表现为准。
 
 ## 功能
 
@@ -232,9 +168,10 @@ Imgbatch 不是纯前端插件，`preload.js` 运行时依赖：
 npm run build:cli-package
 ```
 
-生成目录：
+生成一个用于 CLI 发布的相对目录：
 
-- `F:\Imgbatch\.tmp_imgbatch_cli_016_test`
+- 目录名由构建脚本生成
+- 该目录位于仓库根目录下
 
 这份目录具有这些特点：
 
@@ -252,7 +189,7 @@ npm run build:cli-package
 npm run build:cli-package
 ```
 
-3. 进入生成目录，初始化独立 git 仓库并提交一次：
+3. 进入生成好的 CLI 发布目录，初始化独立 git 仓库并提交一次：
 
 ```bash
 git init
