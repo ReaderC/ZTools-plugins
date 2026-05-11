@@ -16,10 +16,12 @@ import { useProjectStore } from './stores/project';
 import { useSettingsStore } from './stores/settings';
 import { useNodeStore } from './stores/node';
 import { useGitStore } from './stores/git';
+import { useUsageStore } from './stores/usage';
 import type { Project } from './types';
 import { normalizeNvmVersion, findInstalledNodeVersion } from './utils/nvm';
 import { DEFAULT_NETWORK_TIMEOUT_MS, fetchWithTimeout, isAbortError } from './utils/network';
 import { ensureNodeInstallCommand } from './utils/projectCommands';
+import { selectReleaseAsset } from './utils/updateReleaseAsset';
 
 const target = import.meta.env.VITE_TARGET;
 const isPlugin = target === 'utools' || target === 'ztools';
@@ -216,34 +218,17 @@ async function checkUpdate(manual = false) {
           });
 
           const { os, arch } = await api.getPlatformInfo();
-          const versionNoV = latestTag.replace(/^v/, '');
-          let fileName = '';
+          /***********************更新安装包选择*********************/
+          const matchedAsset = selectReleaseAsset(
+            { os, arch },
+            Array.isArray(latestRelease.assets) ? latestRelease.assets : [],
+          );
 
-          if (os === 'windows') {
-            // Windows: project-manager_0.1.10_x64-setup.exe
-            const archStr = arch === 'x86_64' ? 'x64' : arch;
-            fileName = `project-manager_${versionNoV}_${archStr}-setup.exe`;
-          } else if (os === 'macos') {
-            // macOS: project-manager_0.1.10_x64.dmg or aarch64.dmg
-            // Tauri bundle naming for mac usually uses target triple or just arch? 
-            // Standard tauri bundle is {productName}_{version}_{arch}.dmg
-            // x86_64 -> x64, aarch64 -> aarch64
-            const archStr = arch === 'x86_64' ? 'x64' : arch;
-            fileName = `project-manager_${versionNoV}_${archStr}.dmg`;
-          } else if (os === 'linux') {
-            // Linux: project-manager_0.1.10_amd64.AppImage
-            // x86_64 -> amd64
-            const archStr = arch === 'x86_64' ? 'amd64' : arch;
-            fileName = `project-manager_${versionNoV}_${archStr}.AppImage`;
-          } else {
-             // Fallback or error? defaulting to windows x64 if unknown is risky.
-             // But for now let's assume one of these 3.
-             const archStr = arch === 'x86_64' ? 'x64' : arch;
-             fileName = `project-manager_${versionNoV}_${archStr}-setup.exe`;
+          if (!matchedAsset?.browser_download_url) {
+            throw new Error(`No release asset found for ${os}/${arch}`);
           }
 
-          const downloadUrl = `https://github.com/cuteyuchen/project-manager/releases/download/${latestTag}/${fileName}`;
-          await api.installUpdate(downloadUrl);
+          await api.installUpdate(matchedAsset.browser_download_url);
         } catch (error: any) {
           if (error && error.toString().includes('cancelled')) {
              ElMessage.info(t('update.cancelled') || 'Update cancelled');
@@ -566,6 +551,7 @@ onUnmounted(() => {
 const projectStore = useProjectStore();
 const settingsStore = useSettingsStore();
 const nodeStore = useNodeStore();
+const usageStore = useUsageStore();
 
 const triggerSave = () => {
   scheduleSaveData();
@@ -574,6 +560,7 @@ const triggerSave = () => {
 watch(() => projectStore.projects, triggerSave, { deep: true });
 watch(() => settingsStore.settings, triggerSave, { deep: true });
 watch(() => nodeStore.versions, triggerSave, { deep: true });
+watch(() => usageStore.usageData, triggerSave, { deep: true });
 
 watch(
   () => [loaded.value, settingsStore.settings.trayEnabled, settingsStore.settings.locale],

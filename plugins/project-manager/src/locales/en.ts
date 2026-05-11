@@ -92,7 +92,9 @@ export default {
     unpin: 'Unpin',
     selectProjectHint: 'Select a project',
     selectProjectDesc: 'Choose a project from the left to view console and Git management',
-    locateProject: 'Locate project'
+    locateProject: 'Locate project',
+    weightSort: 'Smart Sort',
+    weightSortHint: 'Auto-sort projects by usage frequency. Weight is calculated from opens, command runs, and Git operations over the past 7 days. Newly added projects are shown first. Historical weights decay weekly.'
   },
   nodes: {
     title: 'Node Version Manager',
@@ -108,7 +110,8 @@ export default {
     uninstall: 'Uninstall',
     uninstallConfirm: 'Are you sure you want to uninstall Node {version}?',
     setPath: 'Set Path',
-    setSystemPath: 'Set System Node'
+    setSystemPath: 'Set System Node',
+    setDefault: 'Set Default'
   },
   settings: {
     title: 'Settings',
@@ -130,6 +133,9 @@ export default {
     setAsDefault: 'Set Default',
     defaultTerminal: 'Default Terminal',
     terminalHint: 'Wrapper for script execution.',
+    terminalName: 'Terminal Name',
+    terminalPath: 'Terminal Path',
+    terminalPathPlaceholder: 'e.g. powershell.exe',
     terminalNotInstalled: 'Not Installed',
     terminalAlreadyExists: 'This terminal already exists',
     addTerminal: 'Add custom terminal',
@@ -189,6 +195,9 @@ export default {
     importProjectConflictTitle: 'Project Conflict Details',
     importNodeConflictTitle: 'Node Conflict Details',
     importSettingsConflictTitle: 'Settings Differences',
+    importBatchApply: 'Apply to all:',
+    importApplyAllCurrent: 'Keep All Current',
+    importApplyAllIncoming: 'Use All Imported',
     update: 'Update Settings',
     autoUpdate: 'Auto Check Updates',
     autoUpdateHint: 'Automatically check for updates on startup.',
@@ -488,5 +497,11 @@ export default {
     aiConfigMissing: 'Please configure API Key in Settings first',
     // Commit file list
     selectCommitToView: 'Select a commit to view files',
+    // Batch operations
+    selectedCount: '{count} files selected',
+    batchStage: 'Stage Selected',
+    batchUnstage: 'Unstage Selected',
+    batchDiscard: 'Discard Selected',
+    clearSelection: 'Clear Selection',
   }
 }

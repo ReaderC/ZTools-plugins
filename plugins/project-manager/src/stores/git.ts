@@ -231,6 +231,19 @@ export const useGitStore = defineStore('git', () => {
     try {
       status.value[projectId] = await api.gitStatus(path);
       statusLoadedAt(projectId);
+      // Clear diff if the selected file no longer exists in the status
+      if (selectedDiffFile.value) {
+        const s = status.value[projectId];
+        const fileStillExists = s && [
+          ...s.staged,
+          ...s.unstaged,
+          ...s.untracked,
+          ...s.conflicted,
+        ].some(f => f.path === selectedDiffFile.value);
+        if (!fileStillExists) {
+          clearDiff();
+        }
+      }
     } catch (e) {
       console.error('Failed to get git status:', e);
     }
@@ -617,7 +630,8 @@ export const useGitStore = defineStore('git', () => {
       stream?: boolean;
     }
   ): Promise<string> {
-    const diff = await api.gitDiff(path, undefined, true);
+    /***********************AI 提交信息仅使用已暂存内容*********************/
+    const diff = await api.gitDiffForAi(path);
     if (!diff.trim()) {
       throw new Error('no_staged');
     }
