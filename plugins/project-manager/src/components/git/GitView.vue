@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onActivated, onDeactivated, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue';
 import { useProjectStore } from '../../stores/project';
 import { useGitStore } from '../../stores/git';
 import { useSettingsStore } from '../../stores/settings';
@@ -49,10 +49,28 @@ function persistLayoutNumber(storageKey: string, value: number) {
   settingsStore.settings.layoutState[storageKey] = value;
 }
 
+const leftPaneContainerRef = ref<HTMLElement | null>(null);
+const leftContainerWidth = ref(0);
+let leftResizeObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (!leftPaneContainerRef.value) return;
+  leftResizeObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (entry) leftContainerWidth.value = entry.contentRect.width;
+  });
+  leftResizeObserver.observe(leftPaneContainerRef.value);
+});
+
+onUnmounted(() => {
+  leftResizeObserver?.disconnect();
+});
+
+const leftPaneMax = computed(() => leftContainerWidth.value > 0 ? leftContainerWidth.value * 0.5 : 500);
 const leftPane = useSplitPane({
   initial: 280,
   min: 180,
-  max: 500,
+  max: leftPaneMax,
   direction: 'horizontal',
   storageKey: 'git.changes.leftPane',
 });
@@ -326,7 +344,7 @@ async function copyText(value: string, successMessage: string) {
       <!-- ===== CHANGES TAB: SourceTree-style layout ===== -->
       <div v-if="activeTab === 'changes'" class="flex-1 flex flex-col min-h-0">
         <!-- Top area: status panel (left) + diff view (right) -->
-        <div class="flex-1 flex min-h-0">
+        <div ref="leftPaneContainerRef" class="flex-1 flex min-h-0">
           <!-- Left: file status panel (staged top / unstaged bottom) -->
           <div class="flex flex-col shrink-0 border-r border-slate-200/40 dark:border-slate-700/30" :style="{ width: leftPane.size.value + 'px' }">
             <div ref="statusPanelRef" class="flex-1 flex flex-col min-h-0 overflow-hidden">

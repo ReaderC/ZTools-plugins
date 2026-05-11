@@ -10,6 +10,7 @@ import type { AiServiceConfig, NodeVersion, Project, Settings } from '../types';
 import { isAiServiceConfigured, normalizeAiApiType, requestAiText } from '../utils/ai';
 import { isAbortError } from '../utils/network';
 import { ensureNodeInstallCommand } from '../utils/projectCommands';
+import { createTerminalConfig, getTerminalDuplicateKey, normalizeTerminalConfigs } from '../utils/terminalConfig';
 
 type ImportChoice = 'keep' | 'incoming';
 type ImportDiff = { key: string; label: string; current: string; incoming: string };
@@ -78,7 +79,7 @@ const importPlan = ref<ImportPlan | null>(null);
 const importSourceName = ref('');
 
 const deepClone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
-const draft = ref<Settings>(normalizeAiSettings(deepClone(toRaw(settingsStore.settings))));
+const draft = ref<Settings>(normalizeDefaultTerminalId(normalizeAiSettings(deepClone(toRaw(settingsStore.settings)))));
 const isDirty = computed(() => JSON.stringify(draft.value) !== JSON.stringify(settingsStore.settings));
 
 const importSummary = computed(() => {
@@ -93,11 +94,11 @@ const importSummary = computed(() => {
 });
 
 function resetDraft() {
-  draft.value = normalizeAiSettings(deepClone(toRaw(settingsStore.settings)));
+  draft.value = normalizeDefaultTerminalId(normalizeAiSettings(deepClone(toRaw(settingsStore.settings))));
 }
 
 function handleSave() {
-  Object.assign(settingsStore.settings, normalizeAiSettings(deepClone(toRaw(draft.value))));
+  Object.assign(settingsStore.settings, normalizeDefaultTerminalId(normalizeAiSettings(deepClone(toRaw(draft.value)))));
   ElMessage.success(t('common.success'));
 }
 
@@ -191,22 +192,46 @@ async function browseEditorPath(index: number) {
   }
 }
 
+/***********************自定义终端配置*********************/
+
+function isDuplicateCustomTerminalPath(path: string, currentId?: string) {
+  const duplicateKey = getTerminalDuplicateKey(path);
+  return (draft.value.customTerminals || []).some(item =>
+    item.id !== currentId && getTerminalDuplicateKey(item.path) === duplicateKey,
+  );
+}
+
 async function addCustomTerminal() {
   const selected = await selectExecutable();
   if (!selected) return;
   if (!draft.value.customTerminals) draft.value.customTerminals = [];
-  if (draft.value.customTerminals.some(item => item.id === selected)) {
+  if (isDuplicateCustomTerminalPath(selected)) {
     ElMessage.warning(t('settings.terminalAlreadyExists'));
     return;
   }
-  draft.value.customTerminals.push({ id: selected, name: selected.split(/[/\\]/).pop() || selected });
+  draft.value.customTerminals.push(createTerminalConfig(selected));
+}
+
+async function browseCustomTerminalPath(index: number) {
+  const selected = await selectExecutable();
+  const terminal = draft.value.customTerminals?.[index];
+  if (!selected || !terminal) return;
+  if (isDuplicateCustomTerminalPath(selected, terminal.id)) {
+    ElMessage.warning(t('settings.terminalAlreadyExists'));
+    return;
+  }
+
+  terminal.path = selected;
+  if (!terminal.name) {
+    terminal.name = selected.split(/[/\\]/).pop()?.replace(/\.\w+$/, '') || '';
+  }
 }
 
 function removeCustomTerminal(id: string) {
   if (!draft.value.customTerminals) return;
   draft.value.customTerminals = draft.value.customTerminals.filter(item => item.id !== id);
   if (draft.value.defaultTerminal === id) {
-    draft.value.defaultTerminal = settingsStore.allTerminals[0]?.id || 'cmd';
+    draft.value.defaultTerminal = settingsStore.availableTerminals[0]?.id || draft.value.customTerminals[0]?.id || 'cmd';
   }
 }
 
@@ -257,7 +282,14 @@ function normalizeProject(project: any): Project | null {
 }
 
 function normalizeSettingsPayload(settings: any): Settings {
-  return normalizeAiSettings({ ...deepClone(toRaw(settingsStore.settings)), ...settings });
+  const hasCustomTerminals = Boolean(settings) && Object.prototype.hasOwnProperty.call(settings, 'customTerminals');
+  return normalizeDefaultTerminalId(normalizeAiSettings({
+    ...deepClone(toRaw(settingsStore.settings)),
+    ...settings,
+    customTerminals: hasCustomTerminals
+      ? normalizeTerminalConfigs(settings?.customTerminals)
+      : deepClone(toRaw(settingsStore.settings.customTerminals || [])),
+  }));
 }
 
 function normalizeCustomNode(node: any): NodeVersion | null {
@@ -389,6 +421,24 @@ function normalizeDefaultEditorId(settings: Settings): Settings {
   return settings;
 }
 
+function normalizeDefaultTerminalId(settings: Settings): Settings {
+  const customTerminals = settings.customTerminals || [];
+  const customTerminalIds = new Set(customTerminals.map(item => item.id));
+  const defaultTerminal = settings.defaultTerminal?.trim();
+
+  if (!defaultTerminal) {
+    settings.defaultTerminal = settingsStore.allTerminals[0]?.id || 'cmd';
+    return settings;
+  }
+
+  if (customTerminalIds.has(defaultTerminal)) {
+    return settings;
+  }
+
+  settings.defaultTerminal = defaultTerminal;
+  return settings;
+}
+
 function buildImportPlan(payload: any): ImportPlan {
   const projectFields = [
     { key: 'name', label: t('project.name') },
@@ -435,7 +485,7 @@ function buildImportPlan(payload: any): ImportPlan {
       currentEditors,
       incomingEditors,
     });
-    if (diffs.length) plan.projectConflicts.push({ existingIndex, existing: existingProject, incoming: incomingProject, choice: 'keep', diffs });
+    if (diffs.length) plan.projectConflicts.push({ existingIndex, existing: existingProject, incoming: incomingProject, choice: 'incoming', diffs });
   });
 
   if (normalizedSettings) {
@@ -451,7 +501,7 @@ function buildImportPlan(payload: any): ImportPlan {
         label: field.label,
         current: formatImportValue(String(field.key), currentValue, 'current', { currentEditors, incomingEditors }),
         incoming: formatImportValue(String(field.key), incomingValue, 'incoming', { currentEditors, incomingEditors }),
-        choice: 'keep',
+        choice: 'incoming',
         incomingValue,
       });
     });
@@ -466,7 +516,7 @@ function buildImportPlan(payload: any): ImportPlan {
       { key: 'version', label: t('nodes.version') },
       { key: 'source', label: t('nodes.source') },
     ]);
-    if (diffs.length) plan.nodeConflicts.push({ existingIndex, existing: existingNode, incoming: incomingNode, choice: 'keep', diffs });
+    if (diffs.length) plan.nodeConflicts.push({ existingIndex, existing: existingNode, incoming: incomingNode, choice: 'incoming', diffs });
   });
 
   return plan;
@@ -530,6 +580,22 @@ function cancelImportPreview() {
   importDialogVisible.value = false;
   importPlan.value = null;
   importSourceName.value = '';
+}
+
+function applyAllKeep() {
+  const plan = importPlan.value;
+  if (!plan) return;
+  plan.projectConflicts.forEach(c => c.choice = 'keep');
+  plan.nodeConflicts.forEach(c => c.choice = 'keep');
+  plan.settingsConflicts.forEach(c => c.choice = 'keep');
+}
+
+function applyAllIncoming() {
+  const plan = importPlan.value;
+  if (!plan) return;
+  plan.projectConflicts.forEach(c => c.choice = 'incoming');
+  plan.nodeConflicts.forEach(c => c.choice = 'incoming');
+  plan.settingsConflicts.forEach(c => c.choice = 'incoming');
 }
 
 function openReleases() {
@@ -728,15 +794,25 @@ async function testAiConnection() {
               <div class="flex gap-2">
                 <el-select v-model="draft.defaultTerminal" class="flex-1">
                   <el-option-group :label="t('settings.detectedTerminals')"><el-option v-for="term in settingsStore.availableTerminals" :key="term.id" :label="term.name" :value="term.id" /></el-option-group>
-                  <el-option-group v-if="draft.customTerminals?.length" :label="t('settings.customTerminals')"><el-option v-for="term in draft.customTerminals" :key="term.id" :label="term.name" :value="term.id" /></el-option-group>
+                  <el-option-group v-if="draft.customTerminals?.length" :label="t('settings.customTerminals')"><el-option v-for="term in draft.customTerminals" :key="term.id" :label="term.name || term.path" :value="term.id" /></el-option-group>
                 </el-select>
                 <el-button @click="addCustomTerminal"><div class="i-mdi-plus text-sm" /></el-button>
               </div>
               <div v-if="draft.customTerminals?.length" class="mt-3 space-y-2">
-                <div v-for="term in draft.customTerminals" :key="term.id" class="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 px-3 py-2 text-sm border border-slate-200 dark:border-slate-700/60">
-                  <div class="i-mdi-console text-slate-400" />
-                  <span class="flex-1 truncate">{{ term.name }}</span>
-                  <button class="text-red-400 hover:text-red-500 cursor-pointer" @click="removeCustomTerminal(term.id)"><div class="i-mdi-close text-sm" /></button>
+                <div v-for="(term, index) in draft.customTerminals" :key="term.id" class="panel">
+                  <div class="flex items-center gap-2">
+                    <el-tag v-if="draft.defaultTerminal === term.id" type="primary" effect="light" round>
+                      {{ t('settings.defaultEditorCurrent') }}
+                    </el-tag>
+                    <el-button v-else text type="primary" @click="draft.defaultTerminal = term.id">
+                      {{ t('settings.setAsDefault') }}
+                    </el-button>
+                    <el-input v-model="term.name" :placeholder="t('settings.terminalName')" class="!w-36" />
+                    <el-input v-model="term.path" readonly :placeholder="t('settings.terminalPathPlaceholder')" class="flex-1">
+                      <template #append><el-button @click="browseCustomTerminalPath(index)">{{ t('settings.selectFile') }}</el-button></template>
+                    </el-input>
+                    <el-button type="danger" text @click="removeCustomTerminal(term.id)"><el-icon><div class="i-mdi-close" /></el-icon></el-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -836,6 +912,11 @@ async function testAiConnection() {
           <div class="summary-tile"><div class="summary-label">{{ t('settings.importNodesAdded') }}</div><div class="summary-value">{{ importSummary.addedNodes }}</div></div>
           <div class="summary-tile"><div class="summary-label">{{ t('settings.importNodesConflict') }}</div><div class="summary-value">{{ importSummary.conflictedNodes }}</div></div>
           <div class="summary-tile"><div class="summary-label">{{ t('settings.importSettingsConflict') }}</div><div class="summary-value">{{ importSummary.conflictedSettings }}</div></div>
+        </div>
+        <div v-if="importSummary.conflictedProjects + importSummary.conflictedNodes + importSummary.conflictedSettings > 0" class="flex items-center gap-2">
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{ t('settings.importBatchApply') }}</span>
+          <el-button size="small" @click="applyAllKeep">{{ t('settings.importApplyAllCurrent') }}</el-button>
+          <el-button size="small" type="primary" @click="applyAllIncoming">{{ t('settings.importApplyAllIncoming') }}</el-button>
         </div>
         <div v-if="importPlan.projectConflicts.length" class="space-y-3">
           <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ t('settings.importProjectConflictTitle') }}</div>
